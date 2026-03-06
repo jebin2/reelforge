@@ -1,0 +1,6 @@
+video_to_be_processed/
+temp/
+temp_*/
+thread_id_*/__pycache__/
+*.pyc
+*.egg-info/

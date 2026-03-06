@@ -1,0 +1,124 @@
+from jebin_lib import load_env
+load_env()
+
+import os
+import subprocess
+import cv2
+from tqdm import tqdm
+from custom_logger import logger_config
+from . import common
+
+transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
+
+def download_setup_transnetv2():
+	import zipfile
+	import requests
+	from tqdm import tqdm as _tqdm
+
+	pip_name = "TransNetV2"
+	url = "https://huggingface.co/datasets/jebin2/TransNetV2/resolve/main/TransNetV2.zip"
+	zip_path = os.path.join(os.path.dirname(transnetv2_dir), "TransNetV2.zip")
+
+	os.makedirs(transnetv2_dir, exist_ok=True)
+
+	# Download
+	logger_config.info(f"Downloading TransNetV2 from {url}")
+	response = requests.get(url, stream=True)
+	response.raise_for_status()
+	total = int(response.headers.get("content-length", 0))
+	with open(zip_path, "wb") as f, _tqdm(total=total, unit="B", unit_scale=True, desc="TransNetV2.zip") as bar:
+		for chunk in response.iter_content(chunk_size=8192):
+			f.write(chunk)
+			bar.update(len(chunk))
+
+	# Extract directly into transnetv2_dir (zip contains flat files, no subfolder)
+	logger_config.info(f"Extracting to {transnetv2_dir}")
+	with zipfile.ZipFile(zip_path, "r") as zf:
+		zf.extractall(transnetv2_dir)
+	os.remove(zip_path)
+	logger_config.info("TransNetV2 extracted.")
+
+	# Install dependencies using penv (interactive shell to load aliases)
+	subprocess.run(
+		[
+			"bash",
+			"-ic",
+			f"penv {pip_name} && pip install -e .[{pip_name}]"
+		],
+		check=True,
+		cwd=transnetv2_dir
+	)
+	logger_config.info(f"TransNetV2 dependencies installed.")
+
+def run_transnetv2(video_path: str, frame_timestamps=None, start_from_sec=-1, end_from_sec=-1, skip_segment = [(None, None)]) -> list:
+    common.get_device()
+    transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
+
+    if not os.path.exists(transnetv2_dir):
+        download_setup_transnetv2()
+
+    video_path = os.path.abspath(video_path)
+    scene_txt_path = f"{video_path}.scenes.txt"
+
+    if not os.path.exists(scene_txt_path):
+        # Step 1: Run TransNetV2 using subprocess inside venv
+        python_path = os.path.expanduser("~/.pyenv/versions/TransNetV2_env/bin/python")
+        activate_cmd = f"{python_path} inference/transnetv2.py"
+        cmd = f'CUDA_VISIBLE_DEVICES="" {activate_cmd} "{video_path}"'
+        subprocess.run(cmd, shell=True, check=True, cwd=transnetv2_dir, executable="/bin/bash")
+
+    # Step 2: Verify .scenes.txt was created
+    if not os.path.exists(scene_txt_path):
+        raise FileNotFoundError(f"Scene file not found: {scene_txt_path}")
+
+    logger_config.info(f"📄 Found scene file: {scene_txt_path}")
+
+    # Step 3: Read scenes
+    with open(scene_txt_path, "r") as f:
+        lines = f.readlines()
+        scene_frames = [tuple(map(int, line.strip().split())) for line in lines if line.strip()]
+
+    logger_config.info(f"🎬 Detected {len(scene_frames)} scenes.")
+
+    # Step 4: Convert frame numbers to seconds using cv2
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    if not fps:
+        raise ValueError("Could not determine FPS from video.")
+
+    scene_seconds = []
+    for start, end in tqdm(scene_frames, desc="Converting frames to seconds"):
+        start_sec = start / fps
+        end_sec = end / fps
+
+        # Apply user range filter
+        if start_sec < start_from_sec or (end_from_sec != -1 and end_sec > end_from_sec):
+            continue
+
+        # Skip intro/outro (or other) segments if provided
+        skip_flag = False
+        skip_segment = [seg for seg in skip_segment if seg]
+        for skip_start, skip_end in skip_segment:
+            if skip_start is not None and skip_end is not None:
+                # overlap check
+                if not (end_sec < float(skip_start) or start_sec > float(skip_end)):
+                    skip_flag = True
+                    break
+        if skip_flag:
+            continue
+
+        scene_seconds.append((start_sec, end_sec))
+
+    if frame_timestamps:
+        matched_scenes = []
+        for ts in frame_timestamps:
+            closest_scene = min(scene_seconds, key=lambda scene: min(abs(ts - scene[0]), abs(ts - scene[1])))
+            matched_scenes.append(closest_scene)
+
+        # Optional: remove duplicates if multiple timestamps matched same scene
+        matched_scenes = list(set(matched_scenes))
+    else:
+        matched_scenes = scene_seconds
+
+    return matched_scenes

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video_recap"
+version = "0.1.0"
+description = "Video recap generator for anime and movies"
+requires-python = ">=3.10"
+dependencies = [
+    "json_repair",
+    "requests",
+    "lxml",
+    "cairosvg",
+    "moviepy",
+    "Pillow",
+    "scenedetect[opencv]",
+    "custom_logger @ git+https://github.com/jebin2/custom_logger.git",
+    "browser_manager @ git+https://github.com/jebin2/browser_manager.git",
+    "jebin_lib @ git+https://github.com/jebin2/lib.git",
+    "chat_bot_ui_handler @ git+https://github.com/jebin2/chat_bot_ui_handler.git",
+    "opencv-python",
+    "torch",
+    "transformers @ git+https://github.com/huggingface/transformers.git",
+    "ultralytics",
+    "pynvml",
+    "spacy",
+    "sentence_transformers",
+    "gemiwrap @ git+https://github.com/jebin2/gemiwrap.git",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+video_recap = ["assets/**"]
