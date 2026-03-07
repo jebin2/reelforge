@@ -1,7 +1,7 @@
 from moviepy import AudioFileClip, CompositeAudioClip, concatenate_audioclips
 from moviepy.audio.fx import AudioFadeIn, AudioFadeOut, MultiplyVolume
 import numpy as np
-from . import common
+from .. import common
 import subprocess, sys, os
 
 def get_audio_rms(audio_clip, sample_duration=1.0):

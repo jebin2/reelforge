@@ -9,9 +9,9 @@ import traceback
 
 from jebin_lib import HFDatasetClient
 from custom_logger import logger_config
-from video_recap import config
-from video_recap.video_processor import VideoProcessor
-from video_recap.publisher.publisher_processor import PublisherProcessor
+from reelforge import config
+from reelforge.pipeline.processor import VideoProcessor
+from reelforge.publisher.publisher_processor import PublisherProcessor
 
 class ContentCreator:
 

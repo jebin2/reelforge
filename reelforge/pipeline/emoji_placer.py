@@ -65,7 +65,3 @@ def place_emoji_on_video(video_path, img_path, emoji_text, output_path, position
     utils.write_videofile(final, output_path)
 
     return output_path
-
-# place_emoji_on_video("/home/jebin/git/CaptionCreator/video/Contagion(2011)_TyqrsMIMET.mp4", "media/movie_x_pic/2001: A Space Odyssey (1968)_GebzQWCtUn2001: A Space Odyssey (1968)0001rQYeyJKOOt.jpg", "🚀", position="center", opacity=0.2)
-
-# place_emoji_on_video("/home/jebin/git/CaptionCreator/video/Contagion(2011)_TyqrsMIMET.mp4", "media/movie_x_pic/2001: A Space Odyssey (1968)_GebzQWCtUn2001: A Space Odyssey (1968)0001rQYeyJKOOt.jpg", "🚀", opacity=1.0)

@@ -1,4 +1,4 @@
-from . import common
+from .. import common
 from custom_logger import logger_config
 import torch
 from sentence_transformers import SentenceTransformer, util

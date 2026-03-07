@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import json
 import os
-from . import config
+from .. import config
 
 class CategoryBase(ABC):
     def __init__(self, name, video_processor_obj):

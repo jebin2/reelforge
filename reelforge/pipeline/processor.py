@@ -4,25 +4,25 @@ import subprocess
 from jebin_lib import HFSTTClient, utils, HFTTTClient, HFTTSClient
 import shutil
 import json
-from . import config
+from .. import config
 from chat_bot_ui_handler import GeminiUIChat, AIStudioUIChat
 import json_repair
-from .extract_frame_times import run_transnetv2
-from .extract_frames import map_dialogues_to_scenes, combine_dialogues
+from .scene_detector import run_transnetv2
+from .frame_extractor import map_dialogues_to_scenes, combine_dialogues
 from custom_logger import logger_config
 from .caption_generator import MultiTypeCaptionGenerator
-from .category_base import CategoryBase
-from . import split_paragraph
-from . import common
-from . import sentence_matcher
+from ..categories.base import CategoryBase
+from . import text_splitter as split_paragraph
+from .. import common
+from . import scene_matcher as sentence_matcher
 from browser_manager.browser_config import BrowserConfig
 from pathlib import Path
 from .gemini_config import pre_model_wrapper
 from google import genai
-from . import merge_music
+from . import audio_merger as merge_music
 from . import emoji_placer
-from . import ffmpeg_optimise
-from .pipeline_base import PipelineBase
+from . import video_optimizer as ffmpeg_optimise
+from ..pipeline_base import PipelineBase
 
 class VideoProcessor(PipelineBase):
     def __init__(self, file, category, sync_callback=None):
@@ -32,17 +32,17 @@ class VideoProcessor(PipelineBase):
         """
         Simple, optimized video compression specifically for Google Gemini Pro.
         No complex settings - just compress any video to work perfectly with Gemini Pro.
-        
+
         Optimizations for Gemini Pro:
         - 2 FPS (perfect for LLM frame analysis)
         - 480x270 resolution (readable but compact)
         - Aggressive compression while maintaining visual clarity
         - Always produces small files suitable for LLM processing
-        
+
         Parameters:
         - input_path: Path to input video file
         - output_path: Optional output path (auto-generated if None)
-        
+
         Returns:
         - Path to compressed video file
         """
@@ -73,23 +73,23 @@ class VideoProcessor(PipelineBase):
             "-c:v", "libx264",
             "-crf", "32",                    # Aggressive compression, still readable
             "-preset", "veryslow",           # Best compression efficiency
-        
+
             # Resolution and frame rate optimized for Gemini Pro
             "-vf", "scale=480:270:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=2",
-            
+
             # Audio: Minimal but present
             "-c:a", "aac",
             "-b:a", "24k",                   # Very low audio bitrate
             "-ac", "1",                      # Mono
             "-ar", "22050",                  # Lower sample rate
-            
+
             # Optimize for small file size and streaming
             "-movflags", "+faststart",
             "-avoid_negative_ts", "make_zero",
-            
+
             # Advanced compression settings
             "-x264-params", "keyint=120:scenecut=40:b-adapt=2:me=hex:subme=6:ref=3",
-            
+
             "-f", "mp4",
             "-y", str(tmp_output)
         ]
@@ -98,12 +98,12 @@ class VideoProcessor(PipelineBase):
         utils.run_ffmpeg(cmd)
         # Move to final location
         tmp_output.rename(output_path)
-    
+
         # Show results
         output_size_mb = os.path.getsize(output_path) / (1024 * 1024)
         compression_ratio = input_size_mb / output_size_mb if output_size_mb > 0 else 0
         savings_percent = ((input_size_mb - output_size_mb) / input_size_mb * 100) if input_size_mb > 0 else 0
-    
+
         logger_config.info(f"✅ LLM ready: {output_size_mb:.1f}MB ({compression_ratio:.1f}x smaller, {savings_percent:.1f}% saved)")
 
         if utils.is_valid_video(self.compressed_file_path):
@@ -324,9 +324,9 @@ recap: {full_result["recap"]}.""",
                     logger_config.error(f"Failed to generate recap using pre_model_wrapper: {e}")
                     try:
                         logger_config.info(f"Generating recap for {self.file} using AIStudioUIChat (try {try_times}/5)...")
-                        config = BrowserConfig()
-                        config.additionl_docker_flag = ' '.join(utils.get_docker_volume_mounts(config, self.file_parent_dir_path))
-                        baseUIChat = AIStudioUIChat(config)
+                        cfg = BrowserConfig()
+                        cfg.additionl_docker_flag = ' '.join(utils.get_docker_volume_mounts(cfg, self.file_parent_dir_path))
+                        baseUIChat = AIStudioUIChat(cfg)
                         result = json_repair.loads(baseUIChat.quick_chat(
                             user_prompt=user_prompt,
                             system_prompt=self.category.review_system_prompt(),
@@ -342,7 +342,7 @@ recap: {full_result["recap"]}.""",
 
             if full_result["recap"] == "":
                 raise Exception(f"Failed to generate recap for {self.file}")
-                
+
             with open(self.recap_title_desc_path, "w", encoding="utf-8") as f:
                 json.dump(full_result, f, indent=4, ensure_ascii=False)
 
@@ -632,7 +632,7 @@ recap: {full_result["recap"]}.""",
                     check=True,
                     env=config.SUBPROCESS_ENV
                 )
-            
+
                 utils.copy(f"{cwd}/output_from_auto_crop_9x16.mp4", new_path)
                 frame_obj["auto_crop_9x16_path"] = new_path
                 updated = True
@@ -651,7 +651,7 @@ recap: {full_result["recap"]}.""",
         subprocess.run(
             [
                 sys.executable,
-                "-m", "video_recap.create_music",
+                "-m", "reelforge.pipeline.music_creator",
                 self.generate_recap()["recap"],
                 self.musicgen_path
             ],

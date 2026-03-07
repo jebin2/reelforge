@@ -8,8 +8,8 @@ import cv2
 from PIL import Image
 import numpy as np
 from tqdm import tqdm
-from .extract_frame_times import run_transnetv2
-from .remove_duplicate import FaceDINO
+from .scene_detector import run_transnetv2
+from .duplicate_filter import FaceDINO
 from .person_detector import PersonDetectorYOLO
 
 def variance_of_laplacian(image):
@@ -38,7 +38,7 @@ def brenner_sharpness(image):
 	"""Brenner focus measure - good for high-frequency content."""
 	# Horizontal gradient
 	diff_h = np.abs(image[:, 2:] - image[:, :-2])
-	# Vertical gradient  
+	# Vertical gradient
 	diff_v = np.abs(image[2:, :] - image[:-2, :])
 	return np.sum(diff_h**2) + np.sum(diff_v**2)
 
@@ -47,9 +47,9 @@ def modified_laplacian_sharpness(image):
 	"""Modified Laplacian - more robust than standard Laplacian."""
 	# Use a larger kernel for better edge detection
 	kernel = np.array([[-1, -1, -1],
-					   [-1,  8, -1], 
+					   [-1,  8, -1],
 					   [-1, -1, -1]], dtype=np.float32)
-	
+
 	laplacian = cv2.filter2D(image.astype(np.float32), cv2.CV_32F, kernel)
 	return laplacian.var()
 
@@ -59,12 +59,12 @@ def edge_density_sharpness(image):
 	# Canny edge detection
 	edges = cv2.Canny(image, 50, 150)
 	edge_density = np.sum(edges) / edges.size
-	
+
 	# Combine with edge strength
 	sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)
 	sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
 	edge_strength = np.mean(np.sqrt(sobelx**2 + sobely**2))
-	
+
 	return edge_density * edge_strength
 
 
@@ -114,14 +114,14 @@ def composite_sharpness_score(image):
 	# Normalize image to 0-255 range
 	if image.dtype != np.uint8:
 		image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-	
+
 	# Calculate multiple metrics
 	laplacian_var = variance_of_laplacian(image)
 	sobel_var = sobel_variance(image)
 	tenengrad = tenengrad_sharpness(image)
 	edge_density = edge_density_sharpness(image)
 	local_contrast = local_contrast_sharpness(image)
-	
+
 	# Normalize each metric to 0-1 range (approximate)
 	# These normalization factors might need adjustment based on your content
 	laplacian_norm = min(laplacian_var / 1000, 1.0)
@@ -129,15 +129,15 @@ def composite_sharpness_score(image):
 	tenengrad_norm = min(tenengrad / 1000000, 1.0)
 	edge_norm = min(edge_density / 100, 1.0)
 	contrast_norm = min(local_contrast / 50, 1.0)
-	
+
 	# Weighted combination (adjust weights based on your needs)
 	weights = [0.2, 0.25, 0.25, 0.15, 0.15]
-	composite_score = (weights[0] * laplacian_norm + 
+	composite_score = (weights[0] * laplacian_norm +
 					  weights[1] * sobel_norm +
 					  weights[2] * tenengrad_norm +
 					  weights[3] * edge_norm +
 					  weights[4] * contrast_norm)
-	
+
 	return composite_score
 
 
@@ -152,16 +152,16 @@ def fast_sharpness_assessment(image):
 		scale = min(640/w, 480/h)
 		new_w, new_h = int(w * scale), int(h * scale)
 		image = cv2.resize(image, (new_w, new_h))
-	
+
 	# Use Scharr operator for better accuracy than Sobel
 	scharrx = cv2.Scharr(image, cv2.CV_64F, 1, 0)
 	scharry = cv2.Scharr(image, cv2.CV_64F, 0, 1)
 	gradient_magnitude = np.sqrt(scharrx**2 + scharry**2)
-	
+
 	# Focus on high-gradient regions
 	threshold = np.percentile(gradient_magnitude, 75)
 	high_gradient_mask = gradient_magnitude > threshold
-	
+
 	if np.sum(high_gradient_mask) > 0:
 		return np.mean(gradient_magnitude[high_gradient_mask])
 	else:
@@ -206,27 +206,27 @@ def cosine_similarity_numpy(vec1, vec2):
 	dot_product = np.dot(vec1, vec2)
 	norm_vec1 = np.linalg.norm(vec1)
 	norm_vec2 = np.linalg.norm(vec2)
-	
+
 	if norm_vec1 == 0 or norm_vec2 == 0:
 		return 0.0
-	
+
 	return dot_product / (norm_vec1 * norm_vec2)
 
 def enhanced_black_detection(frame, black_threshold=15, percentage_threshold=0.85):
 	"""Enhanced black frame detection with better thresholding."""
 	if frame is None or frame.size == 0:
 		return True
-	
+
 	# Convert to grayscale
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-	
+
 	# Use Otsu's thresholding for adaptive threshold selection
 	_, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-	
+
 	# Calculate percentage of dark pixels
 	dark_pixels = np.sum(binary < black_threshold)
 	total_pixels = binary.size
-	
+
 	return (dark_pixels / total_pixels) >= percentage_threshold
 
 
@@ -234,17 +234,17 @@ def detect_freeze_frame(frame, previous_frames, threshold=0.95):
 	"""Detect static/freeze frames by comparing with previous frames."""
 	if len(previous_frames) < 3:
 		return False
-	
+
 	# Compare with last few frames
 	for prev_frame in previous_frames[-3:]:
 		# Calculate structural similarity
 		gray_current = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 		gray_prev = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-		
+
 		# Simple pixel difference method
 		diff = cv2.absdiff(gray_current, gray_prev)
 		similarity = 1.0 - (np.mean(diff) / 255.0)
-		
+
 		if similarity > threshold:
 			return True
 	return False
@@ -253,46 +253,46 @@ def detect_freeze_frame(frame, previous_frames, threshold=0.95):
 def detect_low_information(frame, entropy_threshold=4.0):
 	"""Detect frames with low information content using entropy."""
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-	
+
 	# Calculate histogram
 	hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
 	hist = hist.flatten()
 	hist = hist[hist > 0]  # Remove zero entries
-	
+
 	# Calculate entropy
 	prob = hist / hist.sum()
 	entropy = -np.sum(prob * np.log2(prob))
-	
+
 	return entropy < entropy_threshold
 
 
 def detect_text_heavy_frame(frame, text_ratio_threshold=0.3):
 	"""Detect frames that are primarily text (often less meaningful for scene analysis)."""
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-	
+
 	# Apply morphological operations to detect text-like structures
 	kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 	morph = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
-	
+
 	# Edge detection
 	edges = cv2.Canny(morph, 50, 150)
-	
+
 	# Find contours that might be text
 	contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-	
+
 	text_like_contours = 0
 	for contour in contours:
 		area = cv2.contourArea(contour)
 		x, y, w, h = cv2.boundingRect(contour)
 		aspect_ratio = w / h if h > 0 else 0
-		
+
 		# Text-like characteristics: small area, specific aspect ratio
 		if 100 < area < 5000 and 0.1 < aspect_ratio < 10:
 			text_like_contours += 1
-	
+
 	total_area = frame.shape[0] * frame.shape[1]
 	text_ratio = text_like_contours / (total_area / 1000)  # Normalize
-	
+
 	return text_ratio > text_ratio_threshold
 
 
@@ -302,24 +302,24 @@ def is_meaningless_frame(frame):
 	"""
 	if frame is None or frame.size == 0:
 		return True, "Empty frame"
-	
+
 	# 1. Enhanced black frame detection
 	if enhanced_black_detection(frame):
 		return True, "Black frame"
-	
+
 	# 2. Low sharpness detection (using your existing methods)
 	sharpness = fast_sharpness_assessment(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
 	if sharpness < 10:  # Adjust threshold based on your needs
 		return True, "Blurry frame"
-	
+
 	# 3. Low information content
 	if detect_low_information(frame):
 		return True, "Low information content"
-	
+
 	# 4. Text-heavy frames (optional, depending on use case)
 	if detect_text_heavy_frame(frame):
 		return True, "Text-heavy frame"
-	
+
 	return False, "Valid frame"
 
 def resize_to_480p_pil(frame: Image.Image) -> Image.Image:
@@ -329,7 +329,7 @@ def resize_to_480p_pil(frame: Image.Image) -> Image.Image:
     w, h = frame.size
     if h <= 480:
         return frame
-    
+
     scale = 480 / h
     new_w = int(w * scale)
     new_h = 480
@@ -347,7 +347,7 @@ def resize_to_480p(frame):
     h, w = frame.shape[:2]
     if h <= 480:
         return frame  # already small enough
-    
+
     scale = 480 / h
     new_w = int(w * scale)
     new_h = 480
@@ -423,10 +423,10 @@ def extract_sharpest_scene_frame(cap, scene_start: float, scene_end: float, fps:
 		return None, best_time, None
 
 def map_dialogues_to_scenes(
-    scene_list: List[Tuple[float, float]], 
+    scene_list: List[Tuple[float, float]],
     dialogues: List[dict],
-    video_path: str, 
-    frames_dir: str, 
+    video_path: str,
+    frames_dir: str,
     cache_path: str
 ) -> List[dict]:
     """

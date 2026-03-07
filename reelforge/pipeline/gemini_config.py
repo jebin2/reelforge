@@ -1,7 +1,7 @@
 from custom_logger import logger_config
 import os
 from pathlib import Path
-from . import config
+from .. import config
 
 pre_model_wrapper=None
 try:

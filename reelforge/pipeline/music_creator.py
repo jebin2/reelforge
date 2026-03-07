@@ -11,7 +11,7 @@ import time
 import gc
 import subprocess, sys
 
-from . import config, common
+from .. import config, common
 from jebin_lib import utils
 
 # ---------------------------------
@@ -51,8 +51,8 @@ def get_music_prompt(system_prompt, text, max_attempts=5):
     """
     for _ in range(max_attempts):
         try:
-            config = BrowserConfig()
-            baseUIChat = GeminiUIChat(config)
+            cfg = BrowserConfig()
+            baseUIChat = GeminiUIChat(cfg)
             music_prompt_json = json_repair.loads(baseUIChat.quick_chat(
                 user_prompt=text,
                 system_prompt=system_prompt

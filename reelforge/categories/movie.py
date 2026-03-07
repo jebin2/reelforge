@@ -1,5 +1,5 @@
-from .category_base import CategoryBase
-from . import config
+from .base import CategoryBase
+from .. import config
 
 class Movie(CategoryBase):
     def __init__(self, video_processor_obj):

@@ -57,7 +57,7 @@ class MultiTypeCaptionGenerator:
 				try:
 					return json.load(f)
 				except: pass
-		return [{"in_progress": False, "processed": False, "caption": None, "dialogue": None} 
+		return [{"in_progress": False, "processed": False, "caption": None, "dialogue": None}
 				for _ in range(self.num_frames)]
 
 	def _save_temp(self, temp_path, data):
@@ -98,7 +98,7 @@ class MultiTypeCaptionGenerator:
 		thread_id = threading.current_thread().ident
 		handler_key = (type_id - 1) % len(self.sources)
 		_log('info', f"[W{type_id}|H{handler_key}] Started on thread {thread_id}")
-		
+
 		while True:
 			# --- Proactively check if the handler is skipped and pause the worker ---
 			skip_time = None
@@ -148,7 +148,7 @@ class MultiTypeCaptionGenerator:
 
 				with self.lock:
 					temp_data = self._load_temp(temp_path)
-					
+
 					if result:
 						temp_data[idx]["caption"] = result.lower()
 						temp_data[idx]["processed"] = True
@@ -159,11 +159,11 @@ class MultiTypeCaptionGenerator:
 					else:
 						temp_data[idx]["processed"] = False
 						_log('error', f"[W{type_id}] Frame {idx+1} returned no result")
-					
+
 					temp_data[idx]["in_progress"] = False
 					with open(temp_path, "w") as f:
 						json.dump(temp_data, f, indent=4, ensure_ascii=False)
-			
+
 			except HandlerSkippedException:
 				# This block is now a secondary safeguard. The proactive check above should prevent it.
 				_log('warning', f"[W{type_id}] Handler skipped — releasing frame {idx}")
@@ -173,19 +173,19 @@ class MultiTypeCaptionGenerator:
 					with open(temp_path, "w") as f:
 						json.dump(temp_data, f, indent=4, ensure_ascii=False)
 				time.sleep(5) # Brief pause to prevent rapid re-grabbing if the proactive check fails
-			
+
 			except Exception as e:
 				_log('error', f"[W{type_id}] Error on frame {idx}: {e}")
-				
 
-				
+
+
 				with self.lock:
 					temp_data = self._load_temp(temp_path)
 					temp_data[idx]["in_progress"] = False
 					temp_data[idx]["processed"] = False
 					with open(temp_path, "w") as f:
 						json.dump(temp_data, f, indent=4, ensure_ascii=False)
-		
+
 		if hasattr(self._thread_local, 'handler') and self._thread_local.handler is not None:
 			_log('info', f"[W{type_id}] Cleaning up thread-local handler")
 			try:
@@ -212,35 +212,35 @@ class MultiTypeCaptionGenerator:
 				return json.load(f)
 
 		_log('info', f"Starting caption generation for {len(extract_scenes_json)} frames")
-		
+
 		if not utils.path_exists(temp_path):
 			initial_data = [
 				{
-					"in_progress": False, 
-					"processed": False, 
-					"caption": None, 
+					"in_progress": False,
+					"processed": False,
+					"caption": None,
 					"dialogue": extract_scenes_json[i]["dialogue"],
 					"frame_path": extract_scenes_json[i]["frame_path"][0],
 					"progress_start_time": None
-				} 
+				}
 				for i in range(self.num_frames)
 			]
 			self._save_temp(temp_path, initial_data)
 		else:
 			# If the temp file exists, we are resuming.
 			temp_data = self._load_temp(temp_path)
-			
+
 			# Ensure the temp file length matches the input scenes.
 			if len(temp_data) != self.num_frames:
 				_log('warning', f"Temp file has {len(temp_data)} frames, expected {self.num_frames} — reinitializing")
 				initial_data = [
 					{
-						"in_progress": False, 
-						"processed": False, 
-						"caption": None, 
+						"in_progress": False,
+						"processed": False,
+						"caption": None,
 						"dialogue": extract_scenes_json[i]["dialogue"],
 						"frame_path": extract_scenes_json[i]["frame_path"][0]
-					} 
+					}
 					for i in range(self.num_frames)
 				]
 				self._save_temp(temp_path, initial_data)
@@ -249,17 +249,17 @@ class MultiTypeCaptionGenerator:
 				# Reset any "in_progress" flags from a previous crashed run.
 				completed_count = 0
 				reset_count = 0
-				
+
 				for i, data in enumerate(temp_data):
 					if data["in_progress"]:
 						data["in_progress"] = False # Reset the flag
 						data["processed"] = False # Ensure it's not marked as processed
 						data["caption"] = None    # Clear any partial caption
 						reset_count += 1
-					
+
 					if data["processed"] and data["caption"]:
 						completed_count += 1
-					
+
 					# Always update dialogue and frame_path in case the source changed
 					if i < len(extract_scenes_json):
 						data["dialogue"] = extract_scenes_json[i]["dialogue"]
@@ -283,7 +283,7 @@ class MultiTypeCaptionGenerator:
 				if type_id == 0: continue
 				future = executor.submit(self._worker, prompt, extract_scenes_json, temp_path, type_id)
 				futures.append(future)
-			
+
 			for future in futures:
 				try:
 					future.result()
@@ -302,25 +302,25 @@ class MultiTypeCaptionGenerator:
 
 		for i, entry in enumerate(temp_data):
 			captions.append({
-				"scene_caption": entry["caption"], 
+				"scene_caption": entry["caption"],
 				"scene_dialogue": entry["dialogue"]
 			})
 
 		with open(cache_dir, "w") as f:
 			json.dump(captions, f, indent=4, ensure_ascii=False)
-			
+
 		_log('success', f"All captions saved to {cache_dir}")
-		
+
 
 		return captions
 
 	def search_in_ui_type(self, type_id, prompt, file_path, thread_id):
 		from browser_manager.browser_config import BrowserConfig
 		import os
-		
+
 		# Fix: Use consistent handler indexing
 		handler_key = (type_id - 1) % len(self.sources)
-		
+
 		# --- Check handler status before proceeding ---
 		with self.handler_lock:
 			status = self.handler_statuses[handler_key]
@@ -333,7 +333,7 @@ class MultiTypeCaptionGenerator:
 				status["is_skipped"] = False
 				status["failure_count"] = 0
 
-		
+
 		source = self.sources[handler_key]
 
 		import asyncio as _asyncio
@@ -373,9 +373,9 @@ class MultiTypeCaptionGenerator:
 					neko_file_path = "/".join(file_path.split("/")[5:])
 					# Set up additional docker flags
 					config.additionl_docker_flag = ' '.join(utils.get_docker_volume_mounts(config, neko_base_path))
-				
+
 				self._thread_local.handler = source(config=config)
-			
+
 			# Update path for current call if needed (for relative path logic)
 			neko_file_path = file_path
 			if source.__name__ == "AIStudioUIChat" or source.__name__ == "QwenUIChat":
@@ -383,7 +383,7 @@ class MultiTypeCaptionGenerator:
 
 			src_obj = self._thread_local.handler
 			result = src_obj.chat_fresh(user_prompt=prompt, file_path=neko_file_path)
-	
+
 			if not result or len(result.split(" ")) <= 40:
 				raise ValueError(f"Handler {handler_key} returned an invalid or empty result.")
 
@@ -399,7 +399,7 @@ class MultiTypeCaptionGenerator:
 
 		except Exception as e:
 			_log('error', f"[W{type_id}|H{handler_key}] Failed: {e}")
-			
+
 			# Force cleanup on error to ensure clean slate for next attempt
 			if hasattr(self._thread_local, 'handler') and self._thread_local.handler:
 				try: self._thread_local.handler.cleanup()
@@ -415,22 +415,8 @@ class MultiTypeCaptionGenerator:
 					status["is_skipped"] = True
 					status["skip_until"] = time.time() + self.skip_duration
 					_log('warning', f"[H{handler_key}] Failed {status['failure_count']} times — skipping for {self.skip_duration}s")
-			
+
 			# Re-raise the exception so the worker can handle it appropriately
 			raise
 
 		return None
-
-# Usage example and main execution
-if __name__ == "__main__":
-	# Set default values for FYI and local_only
-	FYI = f"This Anime frame is from the anime called 063_-_Guldo_s_Mind_Binds"
-
-	# Example usage
-	captionGen = MultiTypeCaptionGenerator(cache_path="video_to_be_processed/anime/063_-_Guldo_s_Mind_Binds/063_-_Guldo_s_Mind_Binds_caption_generator", FYI=FYI)
-
-	with open("video_to_be_processed/anime/063_-_Guldo_s_Mind_Binds/063_-_Guldo_s_Mind_Binds_fully_extracted_scene_dialogue_map.json", "r") as f:
-		data = json.load(f)
-
-	results = captionGen.caption_generation(data)
-	print(results)

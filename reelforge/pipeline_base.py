@@ -3,7 +3,7 @@ import json
 import os
 from jebin_lib import utils
 from custom_logger import logger_config
-from .category_base import CategoryBase
+from .categories.base import CategoryBase
 
 class PipelineBase(ABC):
     def __init__(self, file, category, sync_callback=None):

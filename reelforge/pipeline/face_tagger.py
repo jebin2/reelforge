@@ -1,5 +1,5 @@
 from jebin_lib import utils
-from . import config
+from .. import config
 
 def setup():
     cwd = "/tmp/FaceTagger"
@@ -17,7 +17,7 @@ def setup():
     cmd = f"{python_path} insight_face_manager.py '{cache_path}' real"
     logger_config.info(f"command to run {cmd}")
 
-    
+
     result = subprocess.run(["bash", "-c", cmd], cwd=cwd, text=True, env=config.SUBPROCESS_ENV)
     if result.returncode != 0:
         raise ValueError(f"FaceTagger failed with code {result.returncode}")

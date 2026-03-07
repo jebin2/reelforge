@@ -50,15 +50,13 @@ def check_if_already_processed(tags):
             if isinstance(data, dict) and data.get('hevc_compressed'):
                 return True
         except json.JSONDecodeError:
-            # If description is not valid JSON, ignore it for this check 
-            # (or check string presence if you preferred, but JSON check is safer)
             pass
 
     # 2. Fallback: Check comment tag (legacy support)
     comment = tags.get('comment', '')
     if 'hevc_compressed' in comment:
         return True
-        
+
     return False
 
 def convert_and_compare(input_file, output_file, overwrite_original=False):
@@ -72,7 +70,7 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
 
     # 2. Get Tags & Check Metadata
     tags = get_file_tags(input_file)
-    
+
     if check_if_already_processed(tags):
         print(f"SKIP: '{input_file}' already has 'hevc_compressed' metadata. Skipping.")
         return
@@ -85,7 +83,7 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
         return
 
     print(f"Processing '{input_file}'...")
-    
+
     # 4. Prepare Metadata (JSON logic)
     existing_description = tags.get('description', "")
     meta_data = {}
@@ -101,10 +99,10 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
             # If it's plain text, wrap it in "post" to match your structure
             meta_data = {"post": existing_description}
             print(f"Converting plain text description to JSON structure.")
-    
+
     # Add our flag
     meta_data['hevc_compressed'] = True
-    
+
     # Dump to JSON string
     description_json = json.dumps(meta_data)
     print(f"Setting Metadata: description={description_json}")
@@ -122,11 +120,11 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
         "-preset", "slow",
         "-crf", "20",
         "-c:a", "copy",       # Copy audio stream (lossless)
-        
+
         # Metadata Handling
         "-map_metadata", "0",              # explicitly copy global metadata from input 0
         "-metadata", f"description={description_json}", # Write the JSON to description
-        
+
         output_file
     ]
 
@@ -144,13 +142,13 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
     if not os.path.isfile(output_file):
         print("Error: Output file was not created.")
         return
-    
+
     new_size = os.path.getsize(output_file)
 
     # 8. Calculate Differences
     size_diff = original_size - new_size
     percent_change = (size_diff / original_size) * 100
-    
+
     if size_diff > 0:
         status = "REDUCTION"
         color_start = "\033[92m" # Green
@@ -172,27 +170,7 @@ def convert_and_compare(input_file, output_file, overwrite_original=False):
     if overwrite_original:
         print(f"Overwriting original file '{input_file}' with new version...")
         try:
-            # We use shutil.move or os.replace. os.replace is atomic on POSIX.
             os.replace(output_file, input_file)
             print("Overwrite complete.")
         except OSError as e:
             print(f"Error overwriting file: {e}")
-
-if __name__ == "__main__":
-    import custom_env
-    # --- CONFIGURATION ---
-    INPUT_VIDEO = "/home/jebin/git/CaptionCreator/video/[Kanavid] Serial Experiments Lain - 02 [BD][1080p][AAC]_mzUSIkSfUs_caption_LYhrEbAhQv_music_SvNFLgHVcC.mp4"
-
-    # We use a temporary name for processing
-    TEMP_OUTPUT = f"{custom_env.TEMP_OUTPUT}/temp_hevc_processing.mp4"
-
-    # Set this to True to replace the original file
-    OVERWRITE_MODE = True
-
-    # Create dummy file for testing if needed
-    if not os.path.exists(INPUT_VIDEO):
-        print(f"Note: '{INPUT_VIDEO}' not found. Creating a dummy file.")
-        with open(INPUT_VIDEO, "wb") as f:
-            f.write(os.urandom(1024 * 1024 * 5))
-
-    convert_and_compare(INPUT_VIDEO, TEMP_OUTPUT, overwrite_original=OVERWRITE_MODE)

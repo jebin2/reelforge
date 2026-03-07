@@ -2,8 +2,8 @@ import math
 from moviepy import ImageClip, CompositeVideoClip, VideoClip
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-from . import common
-from . import config
+from .. import common
+from .. import config
 import random
 import os
 import subprocess
@@ -26,37 +26,37 @@ def get_emoji_path(emoji: str) -> tuple[bool, str | None]:
 	cps = [f"{ord(ch):x}" for ch in emoji][0]
 	# filename = "emoji_u" + "_".join(cps) + ".png"  # consistent naming
 	filename = "emoji_u" + cps + ".png"  # consistent naming
-	
+
 	# Check animated (webp/)
 	webp_path = os.path.join(setup_capto_repo_get(), "webp", filename.replace(".png", ".webp"))
 	if os.path.exists(webp_path):
 		print("webp")
 		return True, webp_path
-	
+
 	# Check static (png/512/)
 	png_path = os.path.join(setup_capto_repo_get(), "png/512", filename)
 	if os.path.exists(png_path):
 		print("png/512")
 		return False, png_path
-	
+
 	# Not found
 	return False, None
 
 def smooth_alpha_channel(img, radius=1.0):
     """
-    Extracts the alpha channel, applies a very subtle blur to it to remove 
+    Extracts the alpha channel, applies a very subtle blur to it to remove
     hard jagged edges (aliasing), and merges it back.
     """
     if img.mode != 'RGBA':
         img = img.convert('RGBA')
-    
+
     # Split channels
     r, g, b, a = img.split()
-    
+
     # Apply subtle blur to alpha only
     # Radius 1.0 is usually enough to fix jagged edges without making it look blurry
     a = a.filter(ImageFilter.GaussianBlur(radius=radius))
-    
+
     # Merge back
     return Image.merge('RGBA', (r, g, b, a))
 
@@ -93,7 +93,7 @@ def create_text_image(text, fontsize=90, color="#4ECDC4", stroke_color="black", 
 	"""Create PIL image with text using font_1"""
 	font_path = config.TEXT_FONT
 	font = ImageFont.truetype(font_path, fontsize)
-	
+
 	# Use textbbox to get the bounding box of the text
 	bbox = font.getbbox(text)
 	text_width = bbox[2] - bbox[0]
@@ -102,17 +102,17 @@ def create_text_image(text, fontsize=90, color="#4ECDC4", stroke_color="black", 
 	# Create a temporary image to get the actual rendered size with stroke
 	temp_img = Image.new('RGBA', (text_width + stroke_width*2, text_height + stroke_width*2), (0,0,0,0))
 	temp_draw = ImageDraw.Draw(temp_img)
-	
+
 	# Draw the text with stroke on the temporary image
 	temp_draw.text((stroke_width - bbox[0], stroke_width - bbox[1]), text, font=font, fill=color, stroke_width=stroke_width, stroke_fill=stroke_color)
-	
+
 	# Get the bounding box of the non-transparent parts of the image
 	img_bbox = temp_img.getbbox()
 
 	if img_bbox:
 		# Crop the image to the actual content
 		img = temp_img.crop(img_bbox)
-		
+
 		# Add some padding to ensure nothing is clipped
 		padded_img = Image.new('RGBA', (img.width + 10, img.height + 10), (0,0,0,0))
 		padded_img.paste(img, (5, 5))
@@ -141,10 +141,10 @@ def create_emoji_clip(emoji, target_size, duration=5, oversample=3):
 		for frame in ImageSequence.Iterator(pil_img):
 			# Ensure RGBA format
 			frame = frame.convert("RGBA")
-            
+
 			# 1. Resize High Quality
 			frame = frame.resize((process_size, process_size), Image.Resampling.LANCZOS)
-			
+
 			# 2. Smooth the edges (Anti-aliasing)
 			frame = smooth_alpha_channel(frame, radius=1.0)
 			frames.append(np.array(frame))
@@ -156,12 +156,12 @@ def create_emoji_clip(emoji, target_size, duration=5, oversample=3):
 
 		# Calculate total animation duration
 		anim_duration = sum(durations)
-		
+
 		# Calculate cumulative time for each frame
 		cumulative_times = [0]
 		for d in durations:
 			cumulative_times.append(cumulative_times[-1] + d)
-		
+
 		# Helper function to get the correct frame index
 		def get_frame_idx(t):
 			loop_time = t % anim_duration
@@ -171,17 +171,17 @@ def create_emoji_clip(emoji, target_size, duration=5, oversample=3):
 					frame_idx = i
 					break
 			return frame_idx
-		
+
 		# Create a function that returns RGB only (without alpha)
 		def make_frame_rgb(t):
 			frame_idx = get_frame_idx(t)
 			return frames[frame_idx][:, :, :3]  # Return only RGB channels
-		
+
 		# Create a function for the alpha mask
 		def make_mask(t):
 			frame_idx = get_frame_idx(t)
 			return frames[frame_idx][:, :, 3] / 255.0  # Return alpha channel normalized
-		
+
 		# Create clip with transparency
 		clip = VideoClip(frame_function=make_frame_rgb, duration=duration)
 		clip = clip.resized((target_size, target_size))
@@ -243,14 +243,14 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 	"""
 	# Get the display text (emoji or word)
 	display_text = word
-	
+
 	left, top, right, bottom = zoom_loc
 	face_center_x = (left + right) // 2
 	face_center_y = (top + bottom) // 2
 
 	# --- Base image clip ---
 	clip = ImageClip(frame_path).with_duration(duration)
-	
+
 	# --- Zoom function focused on zoom_loc ---
 	def zoom_func(t):
 		scale = 1 + 0.04 * t  # zoom in over duration
@@ -259,7 +259,7 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 		return (scale, (-x, -y))
 
 	animated = clip.resized(lambda t: zoom_func(t)[0]).with_position(lambda t: zoom_func(t)[1])
-	
+
 	# Color options
 	colors = [
 		"#E74747", "#FF6B6B", "#4ECDC4", "#2AA0BB", "#36AF77",
@@ -267,7 +267,7 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 		"#2ECC71"
 	]
 	color = random.choice([colors[2], colors[7]])
-	
+
 	# --- Create text/emoji element ---
 	text_elements = []
 	text_clip = None
@@ -277,13 +277,13 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 			# Use PNG emoji image
 			emoji_size = int(fontsize * 1.2)  # Make emoji slightly larger than text would be
 			text_clip = create_emoji_clip(display_text, emoji_size, duration=duration)
-			
+
 		if text_clip is None:
 			display_text = "" if is_emoji(display_text) else display_text
 			# Use font_1 for regular text
 			pil_img = create_text_image(display_text, fontsize=fontsize, color=color, stroke_color="black", stroke_width=5)
 			text_clip = pil_to_moviepy_clip(pil_img, duration=duration)
-		
+
 		# Apply animation based on style
 		if text_clip:
 			safe_pos = find_safe_position(text_clip, zoom_loc, clip.size)
@@ -291,26 +291,26 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 				def wobble_pos(t):
 					return (safe_pos[0], safe_pos[1] + 10*math.sin(20*t))
 				text_clip = text_clip.with_position(wobble_pos)
-				
+
 			elif style == "pulse":
 				text_clip = text_clip.with_position(safe_pos).resized(lambda t: pulse_scale(t))
-				
+
 			elif style == "neon":
 				def neon_pos(t):
 					return float_position(t, safe_pos[0], safe_pos[1])
 				text_clip = text_clip.with_position(neon_pos).resized(lambda t: neon_glow_scale(t))
-				
+
 			elif style == "pop":
 				text_clip = text_clip.with_position(safe_pos).resized(lambda t: pop_in_scale(t))
-				
+
 			elif style == "float":
 				def float_pos(t):
 					return float_position(t, safe_pos[0], safe_pos[1])
 				text_clip = text_clip.with_position(float_pos)
-				
+
 			elif style == "bounce":
 				text_clip = text_clip.with_position(safe_pos).resized(lambda t: bounce_scale(t))
-				
+
 			elif style == "scream":
 				def shake_pos(t):
 					if t > 0.1:
@@ -321,7 +321,7 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 						shake_x, shake_y = 0, 0
 					return (safe_pos[0] + shake_x, safe_pos[1] + shake_y)
 				text_clip = text_clip.with_position(shake_pos).with_opacity(0.7)
-				
+
 			elif style == "slide_in":
 				safe_pos = find_safe_position(text_clip, zoom_loc, clip.size)
 				def slide_pos(t):
@@ -332,7 +332,7 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 					else:
 						return (safe_pos[0], safe_pos[1])
 				text_clip = text_clip.with_position(slide_pos)
-				
+
 			elif style == "glitch":
 				# For glitch effect with emojis, create offset copies
 				if is_emoji(display_text):
@@ -347,42 +347,15 @@ def zoom_with_text(frame_path, zoom_loc, word="", style="neon", duration=5, font
 
 					red_clip = pil_to_moviepy_clip(red_img, duration=duration).with_position((safe_pos[0], safe_pos[1] - 6)).with_opacity(0.7)
 					blue_clip = pil_to_moviepy_clip(blue_img, duration=duration).with_position((safe_pos[0], safe_pos[1] + 6)).with_opacity(0.7)
-					
+
 					text_elements = [red_clip, blue_clip]
-			
+
 			else:
 				# Default style
 				text_clip = text_clip.with_position(safe_pos)
-			
+
 			if style != "glitch":
 				text_elements = [text_clip]
 
 	# --- Final composite ---
 	return CompositeVideoClip([animated] + text_elements), text_clip
-
-
-# Example usage
-if __name__ == "__main__":
-	frame_path = "media/movie_x_pic/2001: A Space Odyssey (1968)_GebzQWCtUn2001: A Space Odyssey (1968)0001rQYeyJKOOt.jpg"
-	
-	# Test with both emoji and text
-	test_cases = [
-		# ("pulse", "dead"),	 # Should use emoji PNG
-		# ("wobble", "jostled"),   # Should use text font
-		("neon", "💀"),	  # Direct emoji
-		# ("neon", "🚶‍♀️"),	  # Should use emoji PNG
-	]
-	
-	for style, word in test_cases:
-		try:
-			final, text_clip = zoom_with_text(frame_path, (100, 100, 100, 100), word, style=style, duration=15)
-			
-			# Safe filename
-			safe_word = word.replace('💀', 'skull').replace('😈', 'evil')
-			output_name = f"/tmp/zoom_{style}.mp4"
-			common.write_videofile(final, output_name)
-			
-		except Exception as e:
-			print(f"Error generating {style} with {word}: {e}")
-			import traceback
-			traceback.print_exc()
