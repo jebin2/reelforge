@@ -11,13 +11,15 @@ from jebin_lib import HFDatasetClient
 from custom_logger import logger_config
 from video_recap import config
 from video_recap.video_processor import VideoProcessor
+from video_recap.publisher.publisher_processor import PublisherProcessor
 
-class VideoRecapPipeline:
+class ContentCreator:
 
-    def __init__(self, local_only=True):
+    def __init__(self, local_only=True, is_publisher=False):
         self.hf_client = HFDatasetClient(repo_id=config.PUBLISH_HF_REPO_ID) if config.PUBLISH_HF_REPO_ID else None
         self.sync_states = {} # Path -> Signature
         self.local_only = local_only
+        self.is_publisher = is_publisher
         self.setup()
 
     def setup(self):
@@ -75,22 +77,27 @@ class VideoRecapPipeline:
         
         for idx, file in enumerate(video_files):
             try:
-                logger_config.info(f"Processing {idx + 1}/{len(video_files)}")
+                pipeline = PublisherProcessor if self.is_publisher else VideoProcessor
+                logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)}")
                 
                 # Robust category extraction: first folder after VIDEO_TO_BE_PROCESSED
                 rel_path = os.path.relpath(file, config.VIDEO_TO_BE_PROCESSED)
                 category = rel_path.split(os.sep)[0]
-            
-                videoProcessor = VideoProcessor(
+
+                pipeline_instance = pipeline(
                     file=file, 
                     category=category,
                     sync_callback=lambda c=category: self.sync(c)
                 )
-                videoProcessor.process()
+                pipeline_instance.process()
             except Exception as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())
 
 if __name__ == '__main__':
     local_only = '--localonly' in sys.argv
-    VideoRecapPipeline(local_only=local_only).run()
+    is_publisher = '--publisher' in sys.argv
+    ContentCreator(
+        local_only=local_only,
+        is_publisher=is_publisher
+    ).run()

@@ -22,46 +22,11 @@ from google import genai
 from . import merge_music
 from . import emoji_placer
 from . import ffmpeg_optimise
+from .pipeline_base import PipelineBase
 
-class VideoProcessor:
+class VideoProcessor(PipelineBase):
     def __init__(self, file, category, sync_callback=None):
-        self.file = file
-        self.category = CategoryBase.get_category(category)
-        self.sync_callback = sync_callback
-        self._wrap_methods()
-        self.set_all_paths()
-
-    def set_all_paths(self):
-        # all paths
-        self.file_parent_dir_path = os.path.dirname(self.file)
-        self.file_base_name_without_ext = os.path.splitext(os.path.basename(self.file))[0]
-        self.file_base_name_with_ext = os.path.basename(self.file)
-        self.file_path = os.path.join(self.file_parent_dir_path, self.file_base_name_without_ext)
-        self.compressed_file_path = self.file_path + "_compressed.mp4"
-        self.audio_path = self.file_path + "_fully_extracted.mp3"
-        self.stt_json_path = self.file_path + "_fully_extracted.json"
-        self.intro_path = self.file_path + "_fully_extracted_intro.json"
-        self.outro_path = self.file_path + "_fully_extracted_outro.json"
-        self.scene_dialogue_map_path = self.file_path + "_fully_extracted_scene_dialogue_map.json"
-        self.frame_dir_path = self.file_path + "_fully_extracted_frames"
-        os.makedirs(self.frame_dir_path, exist_ok=True)
-        self.caption_generator_dir_path = self.file_path + "_caption_generator"
-        os.makedirs(self.caption_generator_dir_path, exist_ok=True)
-        self.caption_generation_json_path = os.path.join(self.caption_generator_dir_path, "caption_generation.json")
-        self.recap_title_desc_path = self.file_path + "_recap_title_desc.json"
-        self.recap_audio_path = self.file_path + "_recap_audio.wav"
-        self.sentences_json_path = self.file_path + "_sentences.json"
-        self.match_scenes_online_path = self.file_path + "_match_scenes_online.json"
-        self.choose_best_frames_json_path = self.file_path + "_choose_best_frames.json"
-        self.sentence_frames_dir_path = self.file_path + "_sentence_frames"
-        os.makedirs(self.sentence_frames_dir_path, exist_ok=True)
-        self.sentence_media_dir_path = self.file_path + "_sentence_media"
-        os.makedirs(self.sentence_media_dir_path, exist_ok=True)
-        self.insight_face_manager_path = self.file_path + "_insight_face_manager"
-        self.musicgen_path = self.file_path + "_musicgen.wav"
-        self.merged_audio_path = self.file_path + "_merged_audio.wav"
-        self.final_video_path = self.file_parent_dir_path + "/output.mp4"
-        self.progress_path = self.file_path + "_progress.json"
+        super().__init__(file, category, sync_callback)
 
     def get_compressed_file(self):
         """
@@ -145,29 +110,6 @@ class VideoProcessor:
             return self.compressed_file_path
         else:
             raise Exception(f"Failed to compress video for {self.file}")
-
-    def _wrap_methods(self):
-        if not self.sync_callback:
-            return
-            
-        # Wrap only methods defined in the class (VideoProcessor)
-        for attr_name in dir(self.__class__):
-            if attr_name.startswith('_') or attr_name == 'process':
-                continue
-            
-            attr = getattr(self, attr_name)
-            if callable(attr):
-                # Set on the instance, not the class!
-                setattr(self, attr_name, self._create_sync_wrapper(attr))
-
-    def _create_sync_wrapper(self, func):
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-            if self.sync_callback:
-                logger_config.info(f"Sync callback for {func.__name__}")
-                self.sync_callback()
-            return result
-        return wrapper
 
     def extract_audio(self):
         audio_file = self.file_path + ".mp3"
@@ -771,10 +713,7 @@ recap: {full_result["recap"]}.""",
             raise Exception(f"Failed to generate final video for {self.file}")
 
     def process(self):
-        self.create_final_video()
-        full_result = self.generate_recap()
-        self.category.create_progress_file(
-            self.progress_path,
-            full_result.get("youtube_title", "watch now"),
-            full_result.get("twitter_post", "watch now")
-        )
+        if not self.is_published():
+            self.create_final_video()
+
+        self.category.create_progress_file()

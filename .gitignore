@@ -4,3 +4,6 @@ temp_*/
 thread_id_*/__pycache__/
 *.pyc
 *.egg-info/
+cc_youtube_auto_pub/
+.env
+video_recap/__pycache__
