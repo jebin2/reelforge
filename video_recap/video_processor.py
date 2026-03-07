@@ -561,7 +561,7 @@ recap: {full_result["recap"]}.""",
 
         hf_ttt_client = HFTTTClient()
         for i, frame_obj in enumerate(best_frames_with_emotion):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}")
+            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
             updated = False
             if "critical_word" not in frame_obj:
                 model_response = json_repair.loads(hf_ttt_client.generate(
@@ -583,7 +583,7 @@ recap: {full_result["recap"]}.""",
         hf_tts_client = HFTTSClient()
 
         for i, frame_obj in enumerate(best_frames_with_emotion):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}")
+            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
             updated = False
             audio_path = os.path.join(self.sentence_media_dir_path, f"audio_{i}.wav")
             video_path = os.path.join(self.sentence_media_dir_path, f"video_{i}.mp4")
@@ -647,7 +647,7 @@ recap: {full_result["recap"]}.""",
 
     def _add_emoji_to_clip(self, best_frames_with_focus_character):
         for i, frame_obj in enumerate(best_frames_with_focus_character):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}")
+            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
             updated = False
             new_path = os.path.join(os.path.dirname(frame_obj["auto_crop_9x16_path"]), "emoji_added_" + os.path.basename(frame_obj["auto_crop_9x16_path"]))
             if "emoji_added_path" not in frame_obj or not utils.is_valid_video(new_path):
@@ -675,7 +675,7 @@ recap: {full_result["recap"]}.""",
         best_frames_with_focus_character = self.create_clip_for_frames()
 
         for i, frame_obj in enumerate(best_frames_with_focus_character):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}")
+            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
             updated = False
             new_path = os.path.join(os.path.dirname(frame_obj["frame_clip_path"]), "auto_crop_9x16_" + os.path.basename(frame_obj["frame_clip_path"]))
             if "auto_crop_9x16_path" not in frame_obj or not utils.is_valid_video(new_path):
@@ -742,6 +742,9 @@ recap: {full_result["recap"]}.""",
             raise Exception(f"Failed to merge audio for {self.file}")
 
     def create_final_video(self):
+        if utils.is_valid_video(self.final_video_path):
+            return self.final_video_path
+
         best_frames_with_focus_character = self.focus_characters_clip()
         merged_audio_path = self.merge_audio()
 
