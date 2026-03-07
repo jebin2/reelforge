@@ -16,6 +16,9 @@ class CategoryBase(ABC):
             return self.name == other
         return super().__eq__(other)
 
+    def allowed_create(self):
+        return True
+
     @staticmethod
     def get_category(name, video_processor_obj):
         if name == "movie":
@@ -24,6 +27,9 @@ class CategoryBase(ABC):
         elif name == "anime":
             from .anime import Anime
             return Anime(video_processor_obj)
+        elif name == "chess":
+            from .chess import Chess
+            return Chess(video_processor_obj)
         else:
             raise ValueError(f"Invalid category: {name}")
 
@@ -35,7 +41,7 @@ class CategoryBase(ABC):
         full_result = self.video_processor_obj.generate_recap()
         with open(self.video_processor_obj.progress_path, "w") as f:
             json.dump({
-                    "FINAL_VIDEO_PATH": os.path.relpath(self.video_processor_obj.final_video_path, os.path.dirname(config.BASE_PATH)),
+                    "FINAL_VIDEO_PATH": os.path.relpath(self.video_processor_obj.final_video_path, config.VIDEO_TO_BE_PROCESSED),
                     "CREDENTIAL_NAME": self.get_cred_token_file_name()[0],
                     "TOKEN_NAME":self.get_cred_token_file_name()[1],
                     "YOUTUBE_TITLE": full_result.get("youtube_title", "watch now"),

@@ -14,8 +14,9 @@ os.makedirs(VIDEO_TO_BE_PROCESSED, exist_ok=True)
 
 ANIME="anime"
 MOVIE="movie"
+CHESS="chess"
 
-CATEGORY=["anime", "movie"]
+CATEGORY=["anime", "movie", "chess"]
 
 PUBLISH_HF_REPO_ID = os.getenv("PUBLISH_HF_REPO_ID")
 

@@ -13,6 +13,9 @@ class PipelineBase(ABC):
         self._wrap_methods()
         self.set_all_paths()
 
+    def allowed_create(self):
+        return self.category.allowed_create()
+
     def set_all_paths(self):
         # all paths
         self.file_parent_dir_path = os.path.dirname(self.file)
@@ -51,7 +54,7 @@ class PipelineBase(ABC):
             
         # Wrap only methods defined in the class
         for attr_name in dir(self.__class__):
-            if attr_name.startswith('_') or attr_name in ["is_published", "set_all_paths", "get_service", "set_service"]:
+            if attr_name.startswith('_') or attr_name in ["is_published", "set_all_paths", "get_service", "set_service", "allowed_create"]:
                 continue
             
             attr = getattr(self, attr_name)

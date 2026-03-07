@@ -22,21 +22,25 @@ class ContentCreator:
         self.is_publisher = is_publisher
         self.setup()
 
+    def _snapshot_video_folders(self, cat_path):
+        """Snapshot per-video-folder fingerprints so initial sync skips unchanged folders."""
+        if not os.path.isdir(cat_path):
+            return
+        for entry in os.scandir(cat_path):
+            if entry.is_dir():
+                self.sync_states[entry.path] = self._get_dir_fingerprint(entry.path)
+
     def setup(self):
         if self.hf_client:
             for cat in config.CATEGORY:
+                local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, cat)
                 if self.local_only:
                     # Overwrite remote with local — skip download, push with delete
-                    local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, cat)
                     self.hf_client.upload_folder(local_cat_path, cat, delete_patterns=["*"])
-                    self.sync_states[local_cat_path] = self._get_dir_fingerprint(local_cat_path)
                 else:
-                    self.sync(cat)
                     self.hf_client.download_folder(cat, config.VIDEO_TO_BE_PROCESSED)
-                    # Snapshot the directory after download so downloaded files
-                    # are included in the baseline and don't trigger a re-upload.
-                    local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, cat)
-                    self.sync_states[local_cat_path] = self._get_dir_fingerprint(local_cat_path)
+                # Snapshot each video subfolder so syncs don't re-upload immediately
+                self._snapshot_video_folders(local_cat_path)
 
     def _get_dir_fingerprint(self, path):
         """Returns a frozenset of (relpath, mtime_ns, size) for all files."""
@@ -53,18 +57,18 @@ class ContentCreator:
                     continue
         return frozenset(result)
 
-    def sync(self, category):
+    def sync(self, local_path, remote_path):
         if self.hf_client:
-            local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, category)
-            current_fp = self._get_dir_fingerprint(local_cat_path)
-
-            if self.sync_states.get(local_cat_path) == current_fp:
+            current_fp = self._get_dir_fingerprint(local_path)
+            if self.sync_states.get(local_path) == current_fp:
                 return  # Nothing changed since last upload
+            self.hf_client.upload_folder(local_path, remote_path)
+            self.sync_states[local_path] = self._get_dir_fingerprint(local_path)
 
-            self.hf_client.upload_folder(local_cat_path, category)
-            # Capture fingerprint AFTER upload so any files the upload itself
-            # modifies (e.g. git-lfs pointer files) are included in the baseline.
-            self.sync_states[local_cat_path] = self._get_dir_fingerprint(local_cat_path)
+    def force_sync(self, local_path, remote_path):
+        if self.hf_client:
+            self.hf_client.upload_folder(local_path, remote_path, delete_patterns=["*"])
+            self.sync_states[local_path] = self._get_dir_fingerprint(local_path)
 
     def run(self):
         all_files = utils.list_files_recursive(config.VIDEO_TO_BE_PROCESSED)
@@ -78,18 +82,24 @@ class ContentCreator:
         for idx, file in enumerate(video_files):
             try:
                 pipeline = PublisherProcessor if self.is_publisher else VideoProcessor
-                logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)}")
+                logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)} : {file}")
                 
                 # Robust category extraction: first folder after VIDEO_TO_BE_PROCESSED
                 rel_path = os.path.relpath(file, config.VIDEO_TO_BE_PROCESSED)
                 category = rel_path.split(os.sep)[0]
 
-                pipeline_instance = pipeline(
-                    file=file, 
+                video_folder = os.path.dirname(file)
+                remote_path = os.path.relpath(video_folder, config.VIDEO_TO_BE_PROCESSED)
+                kwargs = dict(
+                    file=file,
                     category=category,
-                    sync_callback=lambda c=category: self.sync(c)
+                    sync_callback=lambda lp=video_folder, rp=remote_path: self.sync(lp, rp)
                 )
-                pipeline_instance.process()
+                if self.is_publisher:
+                    kwargs['force_sync_callback'] = lambda lp=video_folder, rp=remote_path: self.force_sync(lp, rp)
+                pipeline_instance = pipeline(**kwargs)
+                if self.is_publisher or pipeline_instance.allowed_create():
+                    pipeline_instance.process()
             except Exception as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())

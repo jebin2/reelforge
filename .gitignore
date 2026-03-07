@@ -7,3 +7,4 @@ thread_id_*/__pycache__/
 cc_youtube_auto_pub/
 .env
 video_recap/__pycache__
+video_to_be_processed copy/
