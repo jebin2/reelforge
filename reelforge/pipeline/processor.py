@@ -139,6 +139,8 @@ class VideoProcessor(PipelineBase):
         with open(self.generate_stt(), 'r') as file:
             segment = json.load(file)["segments"]["word"]
 
+        intro_start_sec = None
+        intro_end_sec = None
         if utils.is_valid_json(self.intro_path):
             with open(self.intro_path, 'r') as file:
                 intro_json = json.load(file)
@@ -175,6 +177,8 @@ class VideoProcessor(PipelineBase):
                 }, file, indent=4, ensure_ascii=False)
 
 
+        outro_start_sec = None
+        outro_end_sec = None
         if utils.is_valid_json(self.outro_path):
             with open(self.outro_path, 'r') as file:
                 outro_json = json.load(file)
