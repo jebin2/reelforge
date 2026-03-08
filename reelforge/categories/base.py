@@ -37,6 +37,12 @@ class CategoryBase(ABC):
     def get_cred_token_file_name(self):
         pass
 
+    def get_yt_title(self):
+        return "watch now"
+
+    def get_yt_description(self):
+        return "watch now"
+
     def create_progress_file(self):
         full_result = self.video_processor_obj.generate_recap()
         with open(self.video_processor_obj.progress_path, "w") as f:
@@ -44,7 +50,7 @@ class CategoryBase(ABC):
                     "FINAL_VIDEO_PATH": os.path.relpath(self.video_processor_obj.final_video_path, config.VIDEO_TO_BE_PROCESSED),
                     "CREDENTIAL_NAME": self.get_cred_token_file_name()[0],
                     "TOKEN_NAME":self.get_cred_token_file_name()[1],
-                    "YOUTUBE_TITLE": full_result.get("youtube_title", "watch now"),
-                    "TWITTER_POST": full_result.get("twitter_post", "watch now")
+                    "YOUTUBE_TITLE": full_result.get("youtube_title", self.get_yt_title()),
+                    "TWITTER_POST": full_result.get("twitter_post", self.get_yt_description())
                 }, f, indent=4, ensure_ascii=False
             )

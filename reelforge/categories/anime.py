@@ -18,8 +18,8 @@ class Anime(CategoryBase):
     def allowed_to_publish_in_yt(self):
         return True
 
-    def get_yt_description(self, title=None):
-        return f"#anime #animebreakdown #animeshorts #{title}"
+    def get_yt_description(self):
+        return f"#anime #animebreakdown #animeshorts"
 
     def get_yt_tags(self):
         tags = ['AnimeBreakdown', 'AnimeAnalysis ', 'AnimeReview', 'recap']

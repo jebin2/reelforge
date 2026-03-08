@@ -18,8 +18,8 @@ class Movie(CategoryBase):
     def allowed_to_publish_in_yt(self):
         return True
 
-    def get_yt_description(self, title=None):
-        return f"#movie #moviebreakdown #movieshorts #{title}"
+    def get_yt_description(self):
+        return f"#movie #moviebreakdown #movieshorts"
 
     def get_yt_tags(self):
         tags = ['MovieBreakdown', 'MovieAnalysis ', 'MovieReview', 'recap']

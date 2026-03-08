@@ -18,8 +18,8 @@ class Chess(CategoryBase):
         progress = self.video_processor_obj._get_progress()
         return f"How to solve Chess.com today's daily puzzle : {progress['date']}  #ChessPuzzles #ChessTactics #challenges"
 
-    def get_yt_description(self, title=None):
-        return f"#chess #chessbreakdown #chessshorts #{title}"
+    def get_yt_description(self):
+        return f"#chess #chessbreakdown #chessshorts"
 
     def get_yt_tags(self):
         tags = ['ChessBreakdown', 'ChessAnalysis', 'ChessReview', 'recap']
