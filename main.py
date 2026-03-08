@@ -123,5 +123,4 @@ if __name__ == '__main__':
         if one_pass:
             break
         logger_config.info("Sleeping for 60 seconds", seconds=60)
-        time.sleep(60)
         
