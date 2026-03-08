@@ -14,6 +14,10 @@ class Chess(CategoryBase):
     def allowed_to_publish_in_yt(self):
         return True
 
+    def get_yt_title(self):
+        progress = self.video_processor_obj._get_progress()
+        return f"How to solve Chess.com today's daily puzzle : {progress['date']}  #ChessPuzzles #ChessTactics #challenges"
+
     def get_yt_description(self, title=None):
         return f"#chess #chessbreakdown #chessshorts #{title}"
 
