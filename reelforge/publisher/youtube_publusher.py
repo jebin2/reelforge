@@ -5,7 +5,7 @@ from .. import config as project_config
 
 def _get_youtube_config(token_filename, client_secret_filename):
     """Create YouTubeConfig from environment variables."""
-    encryption_key = os.getenv("CC_ENCRYP_KEY", "")
+    encryption_key = os.getenv("CC_ENCRYPT_KEY", "") or os.getenv("ENCRYPT_KEY", "")
     encrypt_path = os.path.join(project_config.TEMP_PATH, "yt_creds")
     authorization_code_path = os.path.join(project_config.TEMP_PATH, "authorization_code.txt")
     browser_executable = os.getenv("BROWSER_EXECUTABLE")
