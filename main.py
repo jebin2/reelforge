@@ -16,10 +16,11 @@ from reelforge.publisher.publisher_processor import PublisherProcessor
 
 class ContentCreator:
 
-    def __init__(self, local_only=True, is_publisher=False):
+    def __init__(self, local_only=True, remote_only=False, is_publisher=False):
         self.hf_client = HFDatasetClient(repo_id=config.PUBLISH_HF_REPO_ID) if config.PUBLISH_HF_REPO_ID else None
         self.sync_states = {} # Path -> Signature
         self.local_only = local_only
+        self.remote_only = remote_only
         self.is_publisher = is_publisher
         self.setup()
 
@@ -36,9 +37,15 @@ class ContentCreator:
             for cat in config.CATEGORY:
                 local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, cat)
                 if self.local_only:
-                    # Overwrite remote with local — skip download, push with delete
+                    # Delete all in remote, then full local upload
                     self.hf_client.upload_folder(local_cat_path, cat, delete_patterns=["*"])
+                elif self.remote_only:
+                    # Delete all local, then full download from remote
+                    if os.path.isdir(local_cat_path):
+                        shutil.rmtree(local_cat_path)
+                    self.hf_client.download_folder(cat, config.VIDEO_TO_BE_PROCESSED)
                 else:
+                    # Just download and upload — no deleting
                     self.hf_client.download_folder(cat, config.VIDEO_TO_BE_PROCESSED)
                 # Snapshot each video subfolder so syncs don't re-upload immediately
                 self._snapshot_video_folders(local_cat_path)
@@ -107,6 +114,7 @@ class ContentCreator:
 
 def main():
     local_only = '--localonly' in sys.argv
+    remote_only = '--remoteonly' in sys.argv
     is_publisher = '--publisher' in sys.argv
     one_pass = '--onepass' in sys.argv
 
@@ -115,6 +123,7 @@ def main():
         try:
             creator = ContentCreator(
                 local_only=local_only,
+                remote_only=remote_only,
                 is_publisher=is_publisher
             )
             creator.run()
