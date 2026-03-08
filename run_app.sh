@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Kill any existing instance of this app
-pkill -f "reelforge_env/.*python" 2>/dev/null || true
+pkill -f "python main.py $*$" 2>/dev/null || true
 
 RESERVED=2
 TOTAL=$(nproc)
