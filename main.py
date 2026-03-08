@@ -1,6 +1,7 @@
 from jebin_lib import load_env, utils
 load_env()
 
+import gc
 import sys
 import json
 import os, shutil
@@ -104,23 +105,30 @@ class ContentCreator:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())
 
-if __name__ == '__main__':
+def main():
     local_only = '--localonly' in sys.argv
     is_publisher = '--publisher' in sys.argv
     one_pass = '--onepass' in sys.argv
 
-    cc = ContentCreator(
-        local_only=local_only,
-        is_publisher=is_publisher
-    )
     while True:
+        creator = None
         try:
-            cc.run()
+            creator = ContentCreator(
+                local_only=local_only,
+                is_publisher=is_publisher
+            )
+            creator.run()
         except Exception as e:
             logger_config.error(f"Failed to process: {e}")
             logger_config.error(traceback.format_exc())
+            del e
+        finally:
+            del creator
+            gc.collect()
 
         if one_pass:
             break
         logger_config.info("Sleeping for 60 seconds", seconds=60)
-        
+
+if __name__ == '__main__':
+    main()
