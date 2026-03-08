@@ -107,16 +107,21 @@ class ContentCreator:
 if __name__ == '__main__':
     local_only = '--localonly' in sys.argv
     is_publisher = '--publisher' in sys.argv
+    one_pass = '--onepass' in sys.argv
+
+    cc = ContentCreator(
+        local_only=local_only,
+        is_publisher=is_publisher
+    )
     while True:
         try:
-            ContentCreator(
-                local_only=local_only,
-                is_publisher=is_publisher
-            ).run()
-            logger_config.info("Completed processing")
+            cc.run()
         except Exception as e:
             logger_config.error(f"Failed to process: {e}")
             logger_config.error(traceback.format_exc())
 
+        if one_pass:
+            break
         logger_config.info("Sleeping for 60 seconds", seconds=60)
+        time.sleep(60)
         
