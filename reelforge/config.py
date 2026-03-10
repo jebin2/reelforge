@@ -16,7 +16,7 @@ ANIME="anime"
 MOVIE="movie"
 CHESS="chess"
 
-CATEGORY=["anime", "movie", "chess"]
+CATEGORY=[ANIME, MOVIE, CHESS]
 
 PUBLISH_HF_REPO_ID = os.getenv("PUBLISH_HF_REPO_ID")
 
