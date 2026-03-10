@@ -11,7 +11,7 @@ from PIL import ImageSequence, ImageFilter
 from custom_logger import logger_config
 from jebin_lib import utils
 
-def setup_capto_repo_get():
+def setup_noto_emoji_repo():
 	return utils.setup_git_repo_get_install_pip(
 		"https://github.com/jebin2/noto-emoji.git",
 		"/tmp/noto-emoji/",
@@ -28,13 +28,13 @@ def get_emoji_path(emoji: str) -> tuple[bool, str | None]:
 	filename = "emoji_u" + cps + ".png"  # consistent naming
 
 	# Check animated (webp/)
-	webp_path = os.path.join(setup_capto_repo_get(), "webp", filename.replace(".png", ".webp"))
+	webp_path = os.path.join(setup_noto_emoji_repo(), "webp", filename.replace(".png", ".webp"))
 	if os.path.exists(webp_path):
 		print("webp")
 		return True, webp_path
 
 	# Check static (png/512/)
-	png_path = os.path.join(setup_capto_repo_get(), "png/512", filename)
+	png_path = os.path.join(setup_noto_emoji_repo(), "png/512", filename)
 	if os.path.exists(png_path):
 		print("png/512")
 		return False, png_path
