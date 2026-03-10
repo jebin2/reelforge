@@ -68,7 +68,7 @@ class YoutubePublisher:
             cfg = _get_youtube_config(token_name, credential_name)
             uploader = YouTubeUploader(cfg)
 
-        description = self.pp.category.get_yt_description(title)
+        description = self.pp.category.get_yt_description()
         tags = self.pp.category.get_yt_tags()
 
         metadata = VideoMetadata(
@@ -76,7 +76,7 @@ class YoutubePublisher:
             description=description,
             tags=tags,
             category_id="24",  # Entertainment
-            privacy_status="private",
+            privacy_status="public",
             made_for_kids=False,
         )
 
