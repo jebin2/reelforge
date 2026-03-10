@@ -21,13 +21,13 @@ class CategoryBase(ABC):
 
     @staticmethod
     def get_category(name, video_processor_obj):
-        if name == "movie":
+        if name == config.MOVIE:
             from .movie import Movie
             return Movie(video_processor_obj)
-        elif name == "anime":
+        elif name == config.ANIME:
             from .anime import Anime
             return Anime(video_processor_obj)
-        elif name == "chess":
+        elif name == config.CHESS:
             from .chess import Chess
             return Chess(video_processor_obj)
         else:
