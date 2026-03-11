@@ -52,7 +52,7 @@ class YoutubePublisher:
     def publish(self, progress, final_video_path):
         credential_name = progress.get("CREDENTIAL_NAME")
         token_name = progress.get("TOKEN_NAME")
-        title = progress.get("YOUTUBE_TITLE", "watch now")
+        title = progress.get("YOUTUBE_TITLE", self.pp.category.get_yt_title())[:100]
 
         if not credential_name or not token_name:
             logger_config.warning("Missing YouTube credentials in progress file, skipping.")
