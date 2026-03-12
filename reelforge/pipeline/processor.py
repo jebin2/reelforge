@@ -11,14 +11,14 @@ from .scene_detector import run_transnetv2
 from .frame_extractor import map_dialogues_to_scenes, combine_dialogues
 from custom_logger import logger_config
 from .caption_generator import MultiTypeCaptionGenerator
-from jebin_lib import text_splitter as split_paragraph
+from jebin_lib import text_splitter
 from .. import common
 from . import scene_matcher as sentence_matcher
 from browser_manager.browser_config import BrowserConfig
 from pathlib import Path
 from .gemini_config import pre_model_wrapper
 from google import genai
-from . import audio_merger as merge_music
+from jebin_lib import merge_audio as merge_music
 from . import emoji_placer
 from jebin_lib import video_optimizer as ffmpeg_optimise
 from ..pipeline_base import PipelineBase
@@ -381,7 +381,7 @@ recap: {full_result["recap"]}.""",
                     utils.remove_file(self.sentences_json_path)
 
         full_result = self.generate_recap()
-        sentences = split_paragraph.split(full_result["recap"])
+        sentences = text_splitter.split(full_result["recap"])
 
         with open(self.sentences_json_path, "w", encoding="utf-8") as f:
             json.dump(sentences, f, indent=4, ensure_ascii=False)
