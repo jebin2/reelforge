@@ -47,6 +47,10 @@ class PublisherProcessor(PipelineBase):
             logger_config.warning(f"No progress file found for {self.file}, skipping.")
             return
 
+        if not progress.get("PROCESSED", False):
+            logger_config.warning(f"Not processed: {self.file}, skipping.")
+            return
+
         final_video_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, progress.get("FINAL_VIDEO_PATH", ""))
         if not os.path.exists(final_video_path):
             logger_config.warning(f"Final video not found: {final_video_path}, skipping.")
