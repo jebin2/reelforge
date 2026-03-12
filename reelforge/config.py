@@ -15,8 +15,9 @@ os.makedirs(VIDEO_TO_BE_PROCESSED, exist_ok=True)
 ANIME="anime"
 MOVIE="movie"
 CHESS="chess"
+COMIC="comic"
 
-CATEGORY=[ANIME, MOVIE, CHESS]
+CATEGORY=[ANIME, MOVIE, CHESS, COMIC]
 
 HF_BUCKET_ID = os.getenv("HF_BUCKET_ID")
 

@@ -728,5 +728,9 @@ recap: {full_result["recap"]}.""",
             raise Exception(f"Failed to generate final video for {self.file}")
 
     def process(self):
+        if self.is_processed():
+            logger_config.info(f"Already processed: {self.file}")
+            return
+
         self.create_final_video()
         self.category.create_progress_file()

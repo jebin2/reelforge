@@ -2,8 +2,8 @@ from .base import CategoryBase
 from .. import config
 
 class Anime(CategoryBase):
-    def __init__(self, video_processor_obj):
-        super().__init__("anime", video_processor_obj)
+    def __init__(self, processor_obj):
+        super().__init__(config.ANIME, processor_obj)
 
     def get_fyi(self, file_base_name_without_ext):
         return f'This is an Anime frame from the anime called {file_base_name_without_ext}'

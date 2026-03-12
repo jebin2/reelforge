@@ -6,7 +6,7 @@ import subprocess
 import cv2
 from tqdm import tqdm
 from custom_logger import logger_config
-from .. import common
+from jebin_lib import utils
 
 transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
 

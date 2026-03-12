@@ -2,8 +2,8 @@ from .base import CategoryBase
 from .. import config
 
 class Movie(CategoryBase):
-    def __init__(self, video_processor_obj):
-        super().__init__("movie", video_processor_obj)
+    def __init__(self, processor_obj):
+        super().__init__("movie", processor_obj)
 
     def get_fyi(self, file_base_name_without_ext):
         return f'This is a Movie frame from the movie called {file_base_name_without_ext}'
@@ -22,10 +22,7 @@ class Movie(CategoryBase):
         return f"#movie #moviebreakdown #movieshorts"
 
     def get_yt_tags(self):
-        tags = ['MovieBreakdown', 'MovieAnalysis ', 'MovieReview', 'recap']
-        tags.append("shorts")
-
-        return tags
+        return ['MovieBreakdown', 'MovieAnalysis ', 'MovieReview', 'recap']
 
     def get_cred_token_file_name(self):
         return "ytmrcredentials.json", "ytmrtoken.json"

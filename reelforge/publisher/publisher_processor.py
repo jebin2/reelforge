@@ -30,7 +30,7 @@ class PublisherProcessor(PipelineBase):
 
     def _mark_published(self):
         progress = self._get_progress()
-        progress['published'] = True
+        progress['PUBLISHED'] = True
         with open(self.progress_path, 'w') as f:
             json.dump(progress, f, indent=4, ensure_ascii=False)
 
