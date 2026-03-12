@@ -50,8 +50,8 @@ class YoutubePublisher:
         return service, uploader
 
     def publish(self, progress, final_video_path):
-        credential_name = progress.get("CREDENTIAL_NAME")
-        token_name = progress.get("TOKEN_NAME")
+        credential_name = self.pp.category.get_cred_token_file_name()[0]
+        token_name = self.pp.category.get_cred_token_file_name()[1]
         title = progress.get("YOUTUBE_TITLE", self.pp.category.get_yt_title())[:100]
 
         if not credential_name or not token_name:
