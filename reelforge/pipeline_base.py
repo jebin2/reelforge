@@ -1,9 +1,18 @@
 from abc import ABC, abstractmethod
 import json
 import os
-from jebin_lib import utils
 from custom_logger import logger_config
+from jebin_lib import utils
 from .categories.base import CategoryBase
+from . import config  # needed for BASE_PATH in _to_rel
+
+
+def _to_rel(path):
+    """Convert an absolute path to relative (relative to BASE_PATH) for JSON storage."""
+    if path and os.path.isabs(path):
+        return os.path.relpath(path, config.BASE_PATH)
+    return path
+
 
 class PipelineBase(ABC):
     def __init__(self, file, category, sync_callback=None):
@@ -13,8 +22,6 @@ class PipelineBase(ABC):
         self._wrap_methods()
         self.set_all_paths()
 
-    def allowed_create(self):
-        return self.category.allowed_create()
 
     def set_all_paths(self):
         # all paths
@@ -47,17 +54,35 @@ class PipelineBase(ABC):
         self.final_video_path = self.file_parent_dir_path + "/output.mp4"
         self.progress_path = self.file_parent_dir_path + "/progress.json"
 
+    # ------------------------------------------------------------------ progress
+
+    def _get_progress(self):
+        if not os.path.exists(self.progress_path):
+            return {}
+        with open(self.progress_path, 'r') as f:
+            return json.load(f)
+
+    def _save_progress(self, data):
+        with open(self.progress_path, 'w') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
+    # ------------------------------------------------------------------ misc
+
+    def allowed_create(self):
+        return self.category.allowed_create()
+
+    def is_processed(self):
+        progress_json = self._get_progress()
+        return progress_json.get("PROCESSED", False)
+
     def _wrap_methods(self):
         if not self.sync_callback:
             return
-            
-        # Wrap only methods defined in the class
         for attr_name in dir(self.__class__):
             if attr_name.startswith('_') or attr_name in ["is_published", "set_all_paths", "get_service", "set_service", "allowed_create"]:
                 continue
             attr = getattr(self, attr_name)
             if callable(attr):
-                # Set on the instance, not the class!
                 setattr(self, attr_name, self._create_sync_wrapper(attr))
 
     def _create_sync_wrapper(self, func):
@@ -68,15 +93,6 @@ class PipelineBase(ABC):
                 self.sync_callback()
             return result
         return wrapper
-
-    def _get_progress(self):
-        if not os.path.exists(self.progress_path):
-            return {}
-        with open(self.progress_path, 'r') as f:
-            return json.load(f)
-
-    def is_published(self):
-        return self._get_progress().get("published", False)
 
     @abstractmethod
     def process(self):

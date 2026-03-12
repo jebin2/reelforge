@@ -30,11 +30,6 @@ class TextFrameAligner:
             common.manage_gpu("clear_cache")
 
     def match_scenes_online(self, sentences, extract_scenes_json, match_scene):
-        print(sentences)
-        print("\n\n\n\n\n")
-        print(extract_scenes_json)
-        print("\n\n\n\n\n")
-        print(match_scene)
         self.load_sentence_transformer()
         only_captions = [obj["scene_caption"] for obj in extract_scenes_json]
         captions_embeddings = self.embedder.encode(only_captions, convert_to_tensor=True)

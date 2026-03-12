@@ -108,7 +108,6 @@ def clean_text(text):
     text = re.sub(r"\\+", "", text)
     return re.sub(r'\s+', ' ', text).strip()
 
-
 def resize_with_smart_crop(img_path, output_path, target_w=1080, target_h=1920, center_xy=None):
     """
     Resize image to target_h=1080 height, add blurred background to target_h=1920.
