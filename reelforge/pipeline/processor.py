@@ -10,7 +10,8 @@ import json_repair
 from .scene_detector import run_transnetv2
 from .frame_extractor import map_dialogues_to_scenes, combine_dialogues
 from custom_logger import logger_config
-from .caption_generator import MultiTypeCaptionGenerator
+from caption_generator.core import MultiTypeCaptionGenerator
+from chat_bot_ui_handler import GoogleAISearchChat, QwenUIChat, BingUIChat, BraveAISearch, DuckDuckGoAISearch
 from jebin_lib import text_splitter
 from .. import common
 from . import scene_matcher as sentence_matcher
@@ -253,7 +254,7 @@ class VideoProcessor(PipelineBase):
         return scene_dialogue_map
 
     def generate_captions(self):
-        captionGen = MultiTypeCaptionGenerator(cache_path=self.caption_generator_dir_path, FYI=self.category.get_fyi(self.file_base_name_without_ext))
+        captionGen = MultiTypeCaptionGenerator(cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, QwenUIChat, BingUIChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
 
         scene_dialogue_map = captionGen.caption_generation(
             self.generate_frames()
@@ -665,7 +666,7 @@ recap: {full_result["recap"]}.""",
         subprocess.run(
             [
                 sys.executable,
-                "-m", "jebin_lib.music_creator",
+                "-m", "music_creator.core",
                 self.generate_recap()["recap"],
                 self.musicgen_path
             ],
