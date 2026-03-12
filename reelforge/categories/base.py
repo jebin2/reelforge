@@ -54,3 +54,21 @@ class CategoryBase(ABC):
                     "TWITTER_POST": full_result.get("twitter_post", self.get_yt_description())
                 }, f, indent=4, ensure_ascii=False
             )
+
+    def allowed_publish_time(self, publish_time_in_utc=None):
+        # only on friday, saturday and sunday after 06:00 PM IST (12:30 PM UTC)
+        from datetime import datetime
+
+        now = datetime.utcnow()
+
+        if publish_time_in_utc is None:
+            publish_time_in_utc = now.time()
+
+        current_weekday = now.weekday()  # Monday is 0, Sunday is 6
+
+        if current_weekday in [4, 5, 6]:  # Friday, Saturday, Sunday
+            if (publish_time_in_utc.hour > 12 or
+                (publish_time_in_utc.hour == 12 and publish_time_in_utc.minute >= 30)):
+                return True
+
+        return False

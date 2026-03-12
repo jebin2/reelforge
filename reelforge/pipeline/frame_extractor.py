@@ -487,7 +487,7 @@ def map_dialogues_to_scenes(
             "best_time": best_time,
             "frame_path": [frame_path],
             "dialogues": scene_dialogues,
-            "dialogue": ""
+            "scene_dialogue": ""
         })
 
     return scene_dialogue_map
@@ -525,7 +525,7 @@ def combine_dialogues(scene_map: List[dict]) -> List[dict]:
 	combined = []
 	for current in scene_map:
 		combined.append(current)
-		combined[-1]["dialogue"] = " ".join([dia["text"] for dia in current["dialogues"]])
+		combined[-1]["scene_dialogue"] = " ".join([dia["text"] for dia in current["dialogues"]])
 
 	return combined
 

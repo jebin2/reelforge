@@ -29,16 +29,14 @@ class TextFrameAligner:
             del self.embedder
             common.manage_gpu("clear_cache")
 
-    def match_scenes_online(self, captions, sentences, extract_scenes_json, match_scene):
-        print(captions)
-        print("\n\n\n\n\n")
+    def match_scenes_online(self, sentences, extract_scenes_json, match_scene):
         print(sentences)
         print("\n\n\n\n\n")
         print(extract_scenes_json)
         print("\n\n\n\n\n")
         print(match_scene)
         self.load_sentence_transformer()
-        only_captions = [obj["scene_caption"] for obj in captions]
+        only_captions = [obj["scene_caption"] for obj in extract_scenes_json]
         captions_embeddings = self.embedder.encode(only_captions, convert_to_tensor=True)
 
         resulted_sentence = [sent["recap_sentence"] for sent in match_scene]
@@ -74,7 +72,7 @@ class TextFrameAligner:
                     "recap_sentence": curr_sent,
                     "frame_second": extract_scenes_json[frame_idx]["best_time"],
                     "frame_path": frame_path,
-                    "scene_caption": captions[frame_idx],
+                    "scene_caption": extract_scenes_json[frame_idx]["scene_caption"],
                 })
             else:
                 shutil.copy2(cache_dir, cache_dir.replace(".json", ".json.bk"))

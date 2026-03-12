@@ -11,8 +11,7 @@ from .scene_detector import run_transnetv2
 from .frame_extractor import map_dialogues_to_scenes, combine_dialogues
 from custom_logger import logger_config
 from .caption_generator import MultiTypeCaptionGenerator
-from ..categories.base import CategoryBase
-from . import text_splitter as split_paragraph
+from jebin_lib import text_splitter as split_paragraph
 from .. import common
 from . import scene_matcher as sentence_matcher
 from browser_manager.browser_config import BrowserConfig
@@ -21,7 +20,7 @@ from .gemini_config import pre_model_wrapper
 from google import genai
 from . import audio_merger as merge_music
 from . import emoji_placer
-from . import video_optimizer as ffmpeg_optimise
+from jebin_lib import video_optimizer as ffmpeg_optimise
 from ..pipeline_base import PipelineBase
 
 class VideoProcessor(PipelineBase):
@@ -224,10 +223,10 @@ class VideoProcessor(PipelineBase):
         if utils.is_valid_json(self.scene_dialogue_map_path):
             with open(self.scene_dialogue_map_path, "r") as f:
                 data = json.load(f)
-                if len(data) >= 200:
+                if len(data) >= 100:
                     return data
                 else:
-                    logger_config.info(f"Scene dialogue map is not valid (len {len(data)} < 200), regenerating...")
+                    logger_config.info(f"Scene dialogue map is not valid (len {len(data)} < 100), regenerating...")
                     utils.remove_file(self.scene_dialogue_map_path)
 
         intro_start_sec, intro_end_sec, outro_start_sec, outro_end_sec = self.ignore_credit_scenes()
@@ -256,14 +255,16 @@ class VideoProcessor(PipelineBase):
     def generate_captions(self):
         captionGen = MultiTypeCaptionGenerator(cache_path=self.caption_generator_dir_path, FYI=self.category.get_fyi(self.file_base_name_without_ext))
 
-        captions = captionGen.caption_generation(
+        scene_dialogue_map = captionGen.caption_generation(
             self.generate_frames()
         )
 
-        if len(captions) > 0:
-            return captions
-        else:
+        if len([extract_scene for extract_scene in scene_dialogue_map if extract_scene.get("scene_caption") is None or str(extract_scene.get("scene_caption", "")).strip() == ""]) > 0:
             raise Exception(f"Failed to generate captions for {self.file}")
+        else:
+            with open(self.scene_dialogue_map_path, "w", encoding="utf-8") as f:
+                json.dump(scene_dialogue_map, f, indent=4, ensure_ascii=False)
+            return scene_dialogue_map
 
     def _recap_schema(self):
         return genai.types.Schema(
@@ -410,6 +411,16 @@ recap: {full_result["recap"]}.""",
             },
         )
 
+    def _only_scene_caption_dialogue(self):
+        data = self.generate_captions()
+        return [
+            {
+                "scene_caption": obj["scene_caption"],
+                "scene_dialogue": obj["scene_dialogue"]
+            }
+            for obj in data
+        ]
+
     def match_scenes(self):
         match_scene = None
         sentences = self._generate_sentences()
@@ -428,7 +439,7 @@ recap: {full_result["recap"]}.""",
         retry_times = 0
         while match_scene is None and retry_times < 5:
             retry_times += 1
-            user_prompt = f"""Scene Captions:: {self.generate_captions()}\nRecap Sentences:: {sentences}"""
+            user_prompt = f"""Scene Captions:: {self._only_scene_caption_dialogue()}\nRecap Sentences:: {sentences}"""
 
             with open(config.SCENE_MATCHING_SYSTEM_PROMPT, "r") as f:
                 system_prompt = f.read()
@@ -486,9 +497,8 @@ recap: {full_result["recap"]}.""",
             cache_path=self.sentence_frames_dir_path
         ) as aligner:
             best_frames = aligner.match_scenes_online(
-                self.generate_captions(),
                 self._generate_sentences(),
-                self.generate_frames(),
+                self.generate_captions(),
                 self.match_scenes()
             )
 
@@ -628,7 +638,7 @@ recap: {full_result["recap"]}.""",
                 if utils.file_exists(new_path):
                     utils.remove_file(new_path)
 
-                cmd = f"{python_path} auto_crop_9x16.py '{frame_obj['frame_clip_path']}' {'anime' if self.category == config.ANIME else 'real'}"
+                cmd = f"{python_path} auto_crop_9x16.py '{os.path.abspath(frame_obj['frame_clip_path'])}' {'anime' if self.category == config.ANIME else 'real'}"
                 subprocess.run(
                     ["bash", "-c", cmd],
                     cwd=cwd,
@@ -655,7 +665,7 @@ recap: {full_result["recap"]}.""",
         subprocess.run(
             [
                 sys.executable,
-                "-m", "reelforge.pipeline.music_creator",
+                "-m", "jebin_lib.music_creator",
                 self.generate_recap()["recap"],
                 self.musicgen_path
             ],
@@ -697,16 +707,16 @@ recap: {full_result["recap"]}.""",
         concat_list_path = self.final_video_path + ".concat.txt"
         with open(concat_list_path, "w") as f:
             for frame_obj in best_frames_with_focus_character:
-                f.write(f"file '{frame_obj['emoji_added_path']}'\n")
+                f.write(f"file '{os.path.abspath(frame_obj['emoji_added_path'])}'\n")
 
         utils.run_ffmpeg([
             "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", concat_list_path,
-            "-i", merged_audio_path,
+            "-f", "concat", "-safe", "0", "-i", os.path.abspath(concat_list_path),
+            "-i", os.path.abspath(merged_audio_path),
             "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-vf", "fps=24",
             "-c:a", "aac",
             "-shortest",
-            self.final_video_path
+            os.path.abspath(self.final_video_path)
         ])
         os.remove(concat_list_path)
 
@@ -717,7 +727,5 @@ recap: {full_result["recap"]}.""",
             raise Exception(f"Failed to generate final video for {self.file}")
 
     def process(self):
-        if not self.is_published():
-            self.create_final_video()
-
+        self.create_final_video()
         self.category.create_progress_file()

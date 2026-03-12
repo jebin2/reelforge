@@ -28,3 +28,6 @@ class Chess(CategoryBase):
 
     def get_cred_token_file_name(self):
         return "ytcredentials.json", "yttoken.json"
+
+    def allowed_publish_time(self, publish_time_in_utc=None):
+        return True

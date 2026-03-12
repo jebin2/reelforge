@@ -10,9 +10,7 @@ from custom_logger import logger_config
 
 import threading
 import time # Import time for skip logic
-import sys
-from chat_bot_ui_handler import GoogleAISearchChat, AIStudioUIChat, QwenUIChat, PerplexityUIChat, GeminiUIChat, GrokUIChat, CopilotUIChat, BingUIChat, MistralUIChat, PallyUIChat, MoonDream, BraveAISearch, DuckDuckGoAISearch
-from browser_manager.browser_config import BrowserConfig
+from chat_bot_ui_handler import GoogleAISearchChat, QwenUIChat, BingUIChat, BraveAISearch, DuckDuckGoAISearch
 
 # Serialize logger output so multi-line entries (message + separator) from
 # different threads never interleave.
@@ -57,7 +55,7 @@ class MultiTypeCaptionGenerator:
 				try:
 					return json.load(f)
 				except: pass
-		return [{"in_progress": False, "processed": False, "caption": None, "dialogue": None}
+		return [{"in_progress": False, "processed": False, "scene_caption": None, "scene_dialogue": None}
 				for _ in range(self.num_frames)]
 
 	def _save_temp(self, temp_path, data):
@@ -136,7 +134,7 @@ class MultiTypeCaptionGenerator:
 
 			scene = extract_scenes_json[idx]
 			frame_path = scene["frame_path"][0]
-			dialogue = scene["dialogue"]
+			dialogue = scene.get("scene_dialogue", None)
 
 			_log('info', f"[W{type_id}] Processing frame {idx+1}/{len(extract_scenes_json)}")
 
@@ -150,9 +148,9 @@ class MultiTypeCaptionGenerator:
 					temp_data = self._load_temp(temp_path)
 
 					if result:
-						temp_data[idx]["caption"] = result.lower()
+						temp_data[idx]["scene_caption"] = result.lower()
 						temp_data[idx]["processed"] = True
-						temp_data[idx]["dialogue"] = dialogue
+						temp_data[idx]["scene_dialogue"] = dialogue
 						temp_data[idx]["frame_path"] = frame_path
 						worker_processed_count += 1
 						_log('success', f"[W{type_id}] Frame {idx+1}/{len(extract_scenes_json)} done (W{type_id} done so far: {worker_processed_count})")
@@ -198,18 +196,14 @@ class MultiTypeCaptionGenerator:
 
 	def caption_generation(self, extract_scenes_json):
 		self.num_frames = len(extract_scenes_json)
-		cache_dir = os.path.join(self.cache_path, "caption_generation.json")
 		partial_dir = os.path.join(self.cache_path, "partial_captions")
 		utils.create_directory(partial_dir)
 		temp_path = os.path.join(partial_dir, "temp_progress.json")
 		temp_data = self._load_temp(temp_path)
-		if len([cap for cap in temp_data if not cap["processed"]]) != 0:
-			utils.remove_file(cache_dir)
-
-		if utils.path_exists(cache_dir):
-			_log('info', f"Using cached captions for {len(extract_scenes_json)} frames")
-			with open(cache_dir, "r") as f:
-				return json.load(f)
+		if len([extract_scene for extract_scene in extract_scenes_json if extract_scene.get("scene_caption") is None or str(extract_scene.get("scene_caption", "")).strip() == ""]) > 0:
+			_log('info', "Some Pending")
+		else:
+			return extract_scenes_json
 
 		_log('info', f"Starting caption generation for {len(extract_scenes_json)} frames")
 
@@ -218,8 +212,8 @@ class MultiTypeCaptionGenerator:
 				{
 					"in_progress": False,
 					"processed": False,
-					"caption": None,
-					"dialogue": extract_scenes_json[i]["dialogue"],
+					"scene_caption": None,
+					"scene_dialogue": extract_scenes_json[i].get("scene_dialogue", None),
 					"frame_path": extract_scenes_json[i]["frame_path"][0],
 					"progress_start_time": None
 				}
@@ -237,8 +231,8 @@ class MultiTypeCaptionGenerator:
 					{
 						"in_progress": False,
 						"processed": False,
-						"caption": None,
-						"dialogue": extract_scenes_json[i]["dialogue"],
+						"scene_caption": None,
+						"scene_dialogue": extract_scenes_json[i].get("scene_dialogue", None),
 						"frame_path": extract_scenes_json[i]["frame_path"][0]
 					}
 					for i in range(self.num_frames)
@@ -254,15 +248,15 @@ class MultiTypeCaptionGenerator:
 					if data["in_progress"]:
 						data["in_progress"] = False # Reset the flag
 						data["processed"] = False # Ensure it's not marked as processed
-						data["caption"] = None    # Clear any partial caption
+						data["scene_caption"] = None    # Clear any partial scene_caption
 						reset_count += 1
 
-					if data["processed"] and data["caption"]:
+					if data["processed"] and data["scene_caption"]:
 						completed_count += 1
 
 					# Always update dialogue and frame_path in case the source changed
 					if i < len(extract_scenes_json):
-						data["dialogue"] = extract_scenes_json[i]["dialogue"]
+						data["scene_dialogue"] = extract_scenes_json[i].get("scene_dialogue", None)
 						data["frame_path"] = extract_scenes_json[i]["frame_path"][0]
 
 				if reset_count > 0:
@@ -298,21 +292,21 @@ class MultiTypeCaptionGenerator:
 		temp_data = self._load_temp(temp_path)
 		if len([cap for cap in temp_data if not cap["processed"]]) != 0:
 			raise ValueError("Exited without completed.")
-		captions = []
 
 		for i, entry in enumerate(temp_data):
-			captions.append({
-				"scene_caption": entry["caption"],
-				"scene_dialogue": entry["dialogue"]
-			})
+			found_match = False
+			for main_json in extract_scenes_json:
+				if main_json["frame_path"][0] == entry["frame_path"]:
+					main_json["scene_caption"] = entry["scene_caption"]
+					found_match = True
+					break
 
-		with open(cache_dir, "w") as f:
-			json.dump(captions, f, indent=4, ensure_ascii=False)
+			if not found_match:
+				_log('warning', f'Caption not found for {entry["frame_path"]}')
 
-		_log('success', f"All captions saved to {cache_dir}")
+		_log('success', f"All captions saved to extract_scenes_json")
 
-
-		return captions
+		return extract_scenes_json
 
 	def search_in_ui_type(self, type_id, prompt, file_path, thread_id):
 		from browser_manager.browser_config import BrowserConfig
@@ -418,5 +412,3 @@ class MultiTypeCaptionGenerator:
 
 			# Re-raise the exception so the worker can handle it appropriately
 			raise
-
-		return None

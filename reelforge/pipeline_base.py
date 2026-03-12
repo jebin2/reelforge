@@ -32,7 +32,6 @@ class PipelineBase(ABC):
         os.makedirs(self.frame_dir_path, exist_ok=True)
         self.caption_generator_dir_path = self.file_path + "_caption_generator"
         os.makedirs(self.caption_generator_dir_path, exist_ok=True)
-        self.caption_generation_json_path = os.path.join(self.caption_generator_dir_path, "caption_generation.json")
         self.recap_title_desc_path = self.file_path + "_recap_title_desc.json"
         self.recap_audio_path = self.file_path + "_recap_audio.wav"
         self.sentences_json_path = self.file_path + "_sentences.json"
@@ -56,7 +55,6 @@ class PipelineBase(ABC):
         for attr_name in dir(self.__class__):
             if attr_name.startswith('_') or attr_name in ["is_published", "set_all_paths", "get_service", "set_service", "allowed_create"]:
                 continue
-            
             attr = getattr(self, attr_name)
             if callable(attr):
                 # Set on the instance, not the class!

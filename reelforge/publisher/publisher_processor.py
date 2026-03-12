@@ -52,6 +52,10 @@ class PublisherProcessor(PipelineBase):
             logger_config.warning(f"Final video not found: {final_video_path}, skipping.")
             return
 
+        if not self.category.allowed_publish_time():
+            logger_config.info(f"Not allowed to publish at this time for category {self.category}, skipping.")
+            return
+
         published = False
 
         if self.category.allowed_to_publish_in_yt():
