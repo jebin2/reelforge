@@ -7,8 +7,9 @@ import cv2
 from tqdm import tqdm
 from custom_logger import logger_config
 from jebin_lib import utils
+from reelforge import config
 
-transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
+transnetv2_dir = os.path.join(os.path.dirname(config.BASE_PATH), "TransNetV2")
 
 def download_setup_transnetv2():
 	import zipfile
@@ -52,7 +53,7 @@ def download_setup_transnetv2():
 
 def run_transnetv2(video_path: str, frame_timestamps=None, start_from_sec=-1, end_from_sec=-1, skip_segment = [(None, None)]) -> list:
     utils.get_device()
-    transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
+    transnetv2_dir = os.path.join(os.path.dirname(config.BASE_PATH), "TransNetV2")
 
     if not os.path.exists(transnetv2_dir):
         download_setup_transnetv2()
