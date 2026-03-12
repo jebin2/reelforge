@@ -20,14 +20,14 @@ class TextFrameAligner:
         if self.embedder is not None:
             return
         logger_config.info("Loading SentenceTransformer")
-        self.embedder = SentenceTransformer(self.sentence_model_name, device=common.get_device())
+        self.embedder = SentenceTransformer(self.sentence_model_name, device=utils.get_device())
         logger_config.info("SentenceTransformer loaded successfully")
 
     def unload_sentence_transformer(self):
         if self.embedder:
             logger_config.info("Unloading SentenceTransformer model")
             del self.embedder
-            common.manage_gpu("clear_cache")
+            utils.manage_gpu("clear_cache")
 
     def match_scenes_online(self, sentences, extract_scenes_json, match_scene):
         self.load_sentence_transformer()
@@ -93,7 +93,7 @@ class TextFrameAligner:
             gc.collect()
 
             try:
-                if common.is_gpu_available():
+                if utils.is_gpu_available():
                     torch.cuda.empty_cache()
                     torch.cuda.ipc_collect()
                     print("CUDA memory cleaned.")
@@ -101,7 +101,7 @@ class TextFrameAligner:
                 print("Torch not available; skipped GPU cleanup.")
 
             print("Cleanup completed successfully.")
-            common.manage_gpu(action="clear_cache")
+            utils.manage_gpu(action="clear_cache")
         except Exception as e:
             print(f"Error during cleanup: {e}")
 

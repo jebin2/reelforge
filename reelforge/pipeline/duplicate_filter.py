@@ -7,7 +7,7 @@ from .. import common
 
 class FaceDINO:
 	def __init__(self, model_name="facebook/dinov3-vitl16-pretrain-lvd1689m", device=None, threshold=0.9):
-		self.device = device or ("cuda" if common.is_gpu_available() else "cpu")
+		self.device = device or ("cuda" if utils.is_gpu_available() else "cpu")
 		self.processor = AutoImageProcessor.from_pretrained(model_name)
 		self.model = AutoModel.from_pretrained(model_name).to(self.device)
 		self.model.eval()
@@ -86,7 +86,7 @@ class FaceDINO:
 			gc.collect()
 
 			# Clear CUDA memory if available
-			if common.is_gpu_available():
+			if utils.is_gpu_available():
 				torch.cuda.empty_cache()
 				torch.cuda.ipc_collect()
 

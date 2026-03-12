@@ -674,7 +674,7 @@ recap: {full_result["recap"]}.""",
             cwd=config.BASE_PATH,
             env=config.SUBPROCESS_ENV
         )
-        common.manage_gpu(action="clear_cache")
+        utils.manage_gpu(action="clear_cache")
 
         if utils.is_valid_audio(self.musicgen_path):
             return self.musicgen_path

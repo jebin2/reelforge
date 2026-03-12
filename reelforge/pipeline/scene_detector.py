@@ -51,7 +51,7 @@ def download_setup_transnetv2():
 	logger_config.info(f"TransNetV2 dependencies installed.")
 
 def run_transnetv2(video_path: str, frame_timestamps=None, start_from_sec=-1, end_from_sec=-1, skip_segment = [(None, None)]) -> list:
-    common.get_device()
+    utils.get_device()
     transnetv2_dir = f'{os.getenv("ALL_PROJECT_BASE_PATH")}/TransNetV2'
 
     if not os.path.exists(transnetv2_dir):
