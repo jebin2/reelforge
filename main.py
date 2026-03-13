@@ -33,8 +33,8 @@ class ContentCreator:
                         shutil.rmtree(local_cat_path)
                     self.hf_client.download_folder(category, local_cat_path)
                 else:
-                    self.hf_client.download_folder(category, local_cat_path)
                     self.hf_client.upload_folder(local_cat_path, category)
+                    self.hf_client.download_folder(category, local_cat_path)
 
     def sync(self, local_path, remote_path):
         if self.hf_client:
