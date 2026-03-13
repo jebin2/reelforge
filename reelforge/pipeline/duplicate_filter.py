@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 import torch
 from transformers import AutoImageProcessor, AutoModel
-from .. import common
+from jebin_lib import utils
 
 class FaceDINO:
 	def __init__(self, model_name="facebook/dinov3-vitl16-pretrain-lvd1689m", device=None, threshold=0.9):
