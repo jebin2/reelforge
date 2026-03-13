@@ -74,7 +74,7 @@ class ContentCreator:
                 pipeline_instance = pipeline(**kwargs)
                 if self.is_publisher or pipeline_instance.allowed_create():
                     pipeline_instance.process()
-            except Exception as e:
+            except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())
             finally:
@@ -97,7 +97,7 @@ def main():
                 is_publisher=is_publisher
             )
             creator.run()
-        except Exception as e:
+        except (Exception, SystemExit) as e:
             logger_config.error(f"Failed to process: {e}")
             logger_config.error(traceback.format_exc())
             del e
