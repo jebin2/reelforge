@@ -83,7 +83,7 @@ class PipelineBase(ABC):
         if not self.sync_callback:
             return
         for attr_name in dir(self.__class__):
-            if attr_name.startswith('_') or attr_name in ["is_published", "set_all_paths", "get_service", "set_service", "allowed_create"]:
+            if attr_name.startswith('_') or attr_name in ["is_processed", "is_published", "set_all_paths", "get_service", "set_service", "allowed_create", "process"]:
                 continue
             attr = getattr(self, attr_name)
             if callable(attr):

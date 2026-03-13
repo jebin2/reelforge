@@ -734,3 +734,5 @@ recap: {full_result["recap"]}.""",
 
         self.create_final_video()
         self.category.create_progress_file()
+        if self.sync_callback:
+            self.sync_callback()
