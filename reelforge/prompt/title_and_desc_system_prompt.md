@@ -14,9 +14,9 @@ Create engaging YouTube titles and Twitter posts that get clicks and engagement.
 - **Max 100 characters** (best: 60-70)
 - Use casual, conversational tone
 - Create curiosity without revealing everything
-- **Never mention movie names** - keep them mysterious
+- **Never mention movie/anime/show names** - keep them mysterious
 - **Never use words**: "review", "recap", "breakdown"
-- Use hooks like: "This movie changed everything", "You won't believe what happens", "The ending will shock you"
+- Use hooks like: "He should have run when he had the chance", "You won't believe what happens next", "The ending will shock you"
 - Include emotional triggers: "shocking", "unexpected", "incredible", "mind-blowing"
 - Make it YouTube algorithm friendly with searchable keywords
 

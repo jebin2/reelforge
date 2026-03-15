@@ -286,7 +286,7 @@ class VideoProcessor(PipelineBase):
             logger_config.info("Title and Description")
             baseUIChat = GeminiUIChat()
             result_title_desc = json_repair.loads(baseUIChat.quick_chat(
-                user_prompt=f"""Create a suitable youtube title and twitter post for the below anime recap
+                user_prompt=f"""Create a suitable youtube title and twitter post for the below recap
 recap: {full_result["recap"]}.""",
                 system_prompt=system_prompt
             ))

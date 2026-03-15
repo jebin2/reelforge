@@ -27,7 +27,7 @@ Match recap sentences to their most relevant scene captions/dialogues. Each reca
 2. Sort matches by relevance score (highest first).
 3. Assign matches in order of relevance, skipping any scene captions/dialogues already assigned.
 4. Ensure every recap sentence receives exactly one match.
-5. If conflicts arise, prioritize matches with higher relevance scores. skipping any scene captions/dialogues already assigned.
+5. If conflicts arise, prioritize matches with higher relevance scores.
 
 ## Output Format (JSON):
 [{
