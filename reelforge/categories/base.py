@@ -63,20 +63,20 @@ class CategoryBase(ABC):
         })
         self.processor_obj._save_progress(progress)
 
-    def allowed_publish_time(self, publish_time_in_utc=None):
-        # only on friday, saturday and sunday after 06:00 PM IST (12:30 PM UTC)
-        from datetime import datetime
+    def next_allowed_publish_datetime(self, used_dates=None):
+        # Returns next Fri/Sat/Sun at 12:30 UTC (06:00 PM IST) not already in used_dates
+        from datetime import datetime, timedelta
 
-        now = datetime.utcnow()
+        used_dates = used_dates or set()
+        now_utc = datetime.utcnow()
+        candidate = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        if publish_time_in_utc is None:
-            publish_time_in_utc = now.time()
+        for _ in range(30):
+            if candidate.weekday() in [4, 5, 6]:  # Friday, Saturday, Sunday
+                slot = candidate.replace(hour=12, minute=30, second=0, microsecond=0)
+                date_str = slot.strftime("%Y-%m-%d")
+                if slot > now_utc and date_str not in used_dates:
+                    return slot
+            candidate += timedelta(days=1)
 
-        current_weekday = now.weekday()  # Monday is 0, Sunday is 6
-
-        if current_weekday in [4, 5, 6]:  # Friday, Saturday, Sunday
-            if (publish_time_in_utc.hour > 12 or
-                (publish_time_in_utc.hour == 12 and publish_time_in_utc.minute >= 30)):
-                return True
-
-        return False
+        return None

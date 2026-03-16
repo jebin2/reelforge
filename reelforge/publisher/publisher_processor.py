@@ -28,11 +28,36 @@ class PublisherProcessor(PipelineBase):
                 os.remove(entry.path)
         logger_config.info(f"Cleaned up folder: {self.file_parent_dir_path}")
 
-    def _mark_published(self):
+    def _mark_published(self, publish_at_ist=None):
         progress = self._get_progress()
         progress['PUBLISHED'] = True
+        if publish_at_ist:
+            progress['PUBLISH_AT'] = publish_at_ist
         with open(self.progress_path, 'w') as f:
             json.dump(progress, f, indent=4, ensure_ascii=False)
+
+    def _get_used_publish_dates(self):
+        """Return set of dates (YYYY-MM-DD IST) already scheduled or published in this category."""
+        used = set()
+        category_folder = os.path.dirname(self.file_parent_dir_path)
+        if not os.path.isdir(category_folder):
+            return used
+        for entry in os.scandir(category_folder):
+            if not entry.is_dir() or entry.path == self.file_parent_dir_path:
+                continue
+            progress_file = os.path.join(entry.path, "progress.json")
+            if not os.path.exists(progress_file):
+                continue
+            try:
+                with open(progress_file) as f:
+                    import json_repair
+                    p = json_repair.loads(f.read())
+                publish_at = p.get("PUBLISH_AT", "")
+                if publish_at:
+                    used.add(publish_at[:10])  # YYYY-MM-DD
+            except Exception:
+                pass
+        return used
 
     def process(self):
         if self.is_published():
@@ -56,17 +81,32 @@ class PublisherProcessor(PipelineBase):
             logger_config.warning(f"Final video not found: {final_video_path}, skipping.")
             return
 
-        if not self.category.allowed_publish_time():
-            logger_config.info(f"Not allowed to publish at this time for category {self.category}, skipping.")
-            return
+        from datetime import datetime, timedelta
+
+        used_dates = self._get_used_publish_dates()
+        next_publish_time = self.category.next_allowed_publish_datetime(used_dates)
+
+        publish_at_utc = None
+        publish_at_ist = None
+        if next_publish_time:
+            publish_at_utc = next_publish_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            ist_time = next_publish_time + timedelta(hours=5, minutes=30)
+            publish_at_ist = ist_time.strftime("%Y-%m-%d %H:%M:%S")
+            logger_config.info(f"Scheduling publish at {publish_at_ist} IST for {self.file}")
 
         published = False
 
         if self.category.allowed_to_publish_in_yt():
             from .youtube_publusher import YoutubePublisher
             yt = YoutubePublisher(self)
-            if yt.publish(progress, final_video_path):
+            if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc):
                 published = True
+
+            shorts_video_path = progress.get("SHORTS_VIDEO_PATH")
+            if shorts_video_path:
+                shorts_full_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, shorts_video_path)
+                if os.path.exists(shorts_full_path):
+                    yt.publish(progress, shorts_full_path, publish_at_utc=publish_at_utc)
 
         if self.category.allowed_to_publish_in_twitter():
             from .twitter_publisher import TwitterPublisher
@@ -75,7 +115,7 @@ class PublisherProcessor(PipelineBase):
                 published = True
 
         if published:
-            self._mark_published()
+            self._mark_published(publish_at_ist=publish_at_ist)
             self._cleanup_folder()
             if self.force_sync_callback:
                 self.force_sync_callback()

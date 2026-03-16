@@ -49,7 +49,7 @@ class YoutubePublisher:
 
         return service, uploader
 
-    def publish(self, progress, final_video_path):
+    def publish(self, progress, final_video_path, publish_at_utc=None):
         credential_name = self.pp.category.get_cred_token_file_name()[0]
         token_name = self.pp.category.get_cred_token_file_name()[1]
         title = progress.get("YOUTUBE_TITLE", self.pp.category.get_yt_title())[:100]
@@ -76,8 +76,9 @@ class YoutubePublisher:
             description=description,
             tags=tags,
             category_id="24",  # Entertainment
-            privacy_status="public",
+            privacy_status="private" if publish_at_utc else "public",
             made_for_kids=False,
+            publish_at=publish_at_utc,
         )
 
         video_id = uploader.upload_video(
