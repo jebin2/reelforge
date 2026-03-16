@@ -30,6 +30,9 @@ class CategoryBase(ABC):
         elif name == config.CHESS:
             from .chess import Chess
             return Chess(processor_obj)
+        elif name == config.COMIC:
+            from .comic import Comic
+            return Comic(processor_obj)
         else:
             raise ValueError(f"Invalid category: {name}")
 

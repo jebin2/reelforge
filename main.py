@@ -16,7 +16,7 @@ from reelforge.publisher.publisher_processor import PublisherProcessor
 class ContentCreator:
 
     def __init__(self, local_only=True, remote_only=False, is_publisher=False):
-        self.hf_client = HFBucketClient(bucket_id=config.HF_BUCKET_ID) if config.HF_BUCKET_ID and not is_publisher else None
+        self.hf_client = HFBucketClient(bucket_id=config.HF_BUCKET_ID) if config.HF_BUCKET_ID else None
         self.local_only = local_only
         self.remote_only = remote_only
         self.is_publisher = is_publisher
@@ -26,7 +26,11 @@ class ContentCreator:
         if self.hf_client:
             for category in config.CATEGORY:
                 local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, category)
-                if self.local_only:
+                if self.is_publisher:
+                    if category not in [config.COMIC, config.CHESS]:
+                        continue
+                    self.hf_client.download_folder(category, local_cat_path)
+                elif self.local_only:
                     self.hf_client.upload_folder(local_cat_path, category, delete=True)
                 elif self.remote_only:
                     if os.path.isdir(local_cat_path):
