@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import json
+import json_repair
 import os
 from custom_logger import logger_config
 from jebin_lib import utils
@@ -60,7 +61,7 @@ class PipelineBase(ABC):
         if not os.path.exists(self.progress_path):
             return {}
         with open(self.progress_path, 'r') as f:
-            return json.load(f)
+            return json_repair.loads(f.read())
 
     def _save_progress(self, data):
         with open(self.progress_path, 'w') as f:
