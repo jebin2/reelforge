@@ -99,7 +99,13 @@ class PublisherProcessor(PipelineBase):
         if self.category.allowed_to_publish_in_yt():
             from .youtube_publusher import YoutubePublisher
             yt = YoutubePublisher(self)
-            if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc):
+
+            thumbnail_path = progress.get("THUMBNAIL_PATH")
+            thumbnail_full_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, thumbnail_path) if thumbnail_path else None
+            if thumbnail_full_path and not os.path.exists(thumbnail_full_path):
+                thumbnail_full_path = None
+
+            if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc, thumbnail_path=thumbnail_full_path):
                 published = True
 
             shorts_video_path = progress.get("SHORTS_VIDEO_PATH")

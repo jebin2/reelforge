@@ -49,7 +49,7 @@ class YoutubePublisher:
 
         return service, uploader
 
-    def publish(self, progress, final_video_path, publish_at_utc=None):
+    def publish(self, progress, final_video_path, publish_at_utc=None, thumbnail_path=None):
         credential_name = self.pp.category.get_cred_token_file_name()[0]
         token_name = self.pp.category.get_cred_token_file_name()[1]
         title = progress.get("YOUTUBE_TITLE", self.pp.category.get_yt_title())[:100]
@@ -85,6 +85,7 @@ class YoutubePublisher:
             service=service,
             video_path=final_video_path,
             metadata=metadata,
+            thumbnail_path=thumbnail_path,
         )
 
         if video_id:
