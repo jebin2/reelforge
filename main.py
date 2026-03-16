@@ -50,12 +50,16 @@ class ContentCreator:
 
     def run(self):
         all_files = utils.list_files_recursive(config.VIDEO_TO_BE_PROCESSED)
-        # Filter videos: only if folder name and file name match
-        video_files = [
-            f for f in all_files 
-            if f.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm')) 
-            and os.path.splitext(os.path.basename(f))[0] == os.path.basename(os.path.dirname(f))
-        ]
+        if self.is_publisher:
+            # For publisher: scan progress.json files; PublisherProcessor reads FINAL_VIDEO_PATH from them
+            video_files = [f for f in all_files if os.path.basename(f) == "progress.json"]
+        else:
+            # Filter videos: only if folder name and file name match
+            video_files = [
+                f for f in all_files
+                if f.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm'))
+                and os.path.splitext(os.path.basename(f))[0] == os.path.basename(os.path.dirname(f))
+            ]
         
         for idx, file in enumerate(video_files):
             try:
