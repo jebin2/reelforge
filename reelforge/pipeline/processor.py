@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-from jebin_lib import HFSTTClient, utils, HFTTTClient, HFTTSClient
+from jebin_lib import HFSTTClient, utils, HFTTTClient, HFTTSClient, normalize_loudness
 import shutil
 import json
 from .. import config
@@ -722,6 +722,7 @@ recap: {full_result["recap"]}.""",
         os.remove(concat_list_path)
 
         if utils.is_valid_video(self.final_video_path):
+            normalize_loudness(self.final_video_path)
             ffmpeg_optimise.convert_and_compare(self.final_video_path, f"/tmp/{self.file_base_name_without_ext}.hevc.mp4", overwrite_original=True)
             return self.final_video_path
         else:
