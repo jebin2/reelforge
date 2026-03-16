@@ -460,22 +460,36 @@ recap: {full_result["recap"]}.""",
             # Use surrogatepass→replace pattern which reliably strips lone surrogates.
             if isinstance(match_scene, str):
                 match_scene = match_scene.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='replace')
-            geminiWrapper = pre_model_wrapper(
-                system_instruction=system_prompt,
-                schema=self._match_scene_schema(),
-                delete_files=True
-            )
-            model_responses = geminiWrapper.send_message(
-                user_prompt=match_scene
-            )
 
+            # Try direct JSON parse first (no AI needed)
+            validated_scene = None
             try:
-                match_scene = json_repair.loads(model_responses[0])["data"]
-                all_recap = [sent["recap_sentence"] for sent in match_scene]
-                all_recap[len(sentences) - 1]
-            except Exception as e:
-                logger_config.error(f"Sentence not similar retry: {e}")
-                match_scene = None
+                validated_scene = utils.parse_json(match_scene, schema={
+                    "type": list,
+                    "items": {"required": ["scene_caption", "recap_sentence"]},
+                })
+            except Exception:
+                pass
+
+            if validated_scene is not None:
+                match_scene = validated_scene
+            else:
+                try:
+                    # Fall back to AI JSON validation
+                    geminiWrapper = pre_model_wrapper(
+                        system_instruction=system_prompt,
+                        schema=self._match_scene_schema(),
+                        delete_files=True
+                    )
+                    model_responses = geminiWrapper.send_message(
+                        user_prompt=match_scene
+                    )
+                    match_scene = json_repair.loads(model_responses[0])["data"]
+                    all_recap = [sent["recap_sentence"] for sent in match_scene]
+                    all_recap[len(sentences) - 1]
+                except Exception as e:
+                    logger_config.error(f"Sentence not similar retry: {e}")
+                    match_scene = None
 
         if match_scene is None:
             raise ValueError("Failed to generate match scene")
