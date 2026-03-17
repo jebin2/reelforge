@@ -162,6 +162,8 @@ class VideoProcessor(PipelineBase):
                 user_prompt=intro_new_seg,
                 system_prompt=system_prompt
             ))
+            if not isinstance(result, dict):
+                raise ValueError(f"GeminiUIChat returned unexpected response for intro: {result!r}")
 
             with open(self.intro_path, 'w') as file:
                 intro_start_sec = result.get("start_sec", None)
@@ -200,6 +202,8 @@ class VideoProcessor(PipelineBase):
                 user_prompt=outro_new_seg,
                 system_prompt=system_prompt
             ))
+            if not isinstance(result, dict):
+                raise ValueError(f"GeminiUIChat returned unexpected response for outro: {result!r}")
 
             with open(self.outro_path, 'w') as file:
                 outro_start_sec = result.get("start_sec", None)
@@ -290,6 +294,8 @@ class VideoProcessor(PipelineBase):
 recap: {full_result["recap"]}.""",
                 system_prompt=system_prompt
             ))
+            if not isinstance(result_title_desc, dict):
+                raise ValueError(f"GeminiUIChat returned unexpected response for title/desc: {result_title_desc!r}")
             full_result["youtube_title"] = result_title_desc["youtube_title"]
             full_result["twitter_post"] = result_title_desc["twitter_post"]
 
@@ -338,6 +344,8 @@ recap: {full_result["recap"]}.""",
                             system_prompt=self.category.review_system_prompt(),
                             file_path=os.path.basename(self.get_compressed_file())
                         ))
+                        if not isinstance(result, dict) or "data" not in result:
+                            raise ValueError(f"AIStudioUIChat returned unexpected response for recap: {result!r}")
                         recap_str = result["data"]
                         logger_config.info(f"Recap generated for {self.file} using AIStudioUIChat: {recap_str}")
                     except Exception as e:
@@ -539,6 +547,8 @@ recap: {full_result["recap"]}.""",
                     text=f'The sentence:: {frame_obj["recap_sentence"]}',
                     system_prompt=system_prompt
                 ))
+                if not isinstance(model_response, dict):
+                    raise ValueError(f"HFTTTClient returned unexpected response for emoji: {model_response!r}")
                 frame_obj["critical_word"] = model_response.get("word", "")
                 frame_obj["critical_emoji"] = model_response.get("emoji", "")
                 updated = True
