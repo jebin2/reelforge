@@ -677,17 +677,20 @@ recap: {full_result["recap"]}.""",
         if utils.is_valid_audio(self.musicgen_path):
             return self.musicgen_path
 
-        subprocess.run(
+        result = subprocess.run(
             [
                 sys.executable,
                 "-m", "music_creator.core",
                 self.generate_recap()["recap"],
                 self.musicgen_path
             ],
-            check=True,
             cwd=config.BASE_PATH,
-            env=config.SUBPROCESS_ENV
+            env=config.SUBPROCESS_ENV,
+            capture_output=True,
+            text=True
         )
+        if result.returncode != 0:
+            raise Exception(f"music_creator.core failed (exit {result.returncode}):\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}")
         utils.manage_gpu(action="clear_cache")
 
         if utils.is_valid_audio(self.musicgen_path):
