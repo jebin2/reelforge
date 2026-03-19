@@ -64,7 +64,7 @@ class CategoryBase(ABC):
         self.processor_obj._save_progress(progress)
 
     def next_allowed_publish_datetime(self, used_dates=None):
-        # Returns next Fri/Sat/Sun at 12:30 UTC (06:00 PM IST) not already in used_dates
+        # Returns next Fri/Sat/Sun at 03:30 AM UTC (09:00 AM IST) not already in used_dates
         from datetime import datetime, timedelta
 
         used_dates = used_dates or set()
@@ -73,7 +73,7 @@ class CategoryBase(ABC):
 
         for _ in range(30):
             if candidate.weekday() in [4, 5, 6]:  # Friday, Saturday, Sunday
-                slot = candidate.replace(hour=12, minute=30, second=0, microsecond=0)
+                slot = candidate.replace(hour=3, minute=30, second=0, microsecond=0)
                 date_str = slot.strftime("%Y-%m-%d")
                 if slot > now_utc and date_str not in used_dates:
                     return slot
