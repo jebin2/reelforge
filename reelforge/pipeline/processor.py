@@ -709,6 +709,7 @@ recap: {full_result["recap"]}.""",
             raise Exception(f"Failed to generate music for {self.file}")
 
     def merge_audio(self):
+        return self.generate_recap_audio() # currently ausio not working so.
         if utils.is_valid_audio(self.merged_audio_path):
             return self.merged_audio_path
 
