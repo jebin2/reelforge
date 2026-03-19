@@ -64,19 +64,30 @@ class CategoryBase(ABC):
         self.processor_obj._save_progress(progress)
 
     def next_allowed_publish_datetime(self, used_dates=None):
-        # Returns next Fri/Sat/Sun at 03:30 AM UTC (09:00 AM IST) not already in used_dates
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
+        import random
+
+        WED, FRI, SUN = 2, 4, 6
+        TARGET_DAYS = {WED, FRI, SUN}
+
+        TIMES = [(3, 30), (14, 30)]
+        hour, minute = random.choice(TIMES)
 
         used_dates = used_dates or set()
-        now_utc = datetime.utcnow()
+        now_utc = datetime.now(timezone.utc)
+
+        # Start from today (midnight UTC)
         candidate = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
         for _ in range(30):
-            if candidate.weekday() in [4, 5, 6]:  # Friday, Saturday, Sunday
-                slot = candidate.replace(hour=3, minute=30, second=0, microsecond=0)
+            if candidate.weekday() in TARGET_DAYS:
+                slot = candidate.replace(hour=hour, minute=minute)
+
                 date_str = slot.strftime("%Y-%m-%d")
+
                 if slot > now_utc and date_str not in used_dates:
                     return slot
+
             candidate += timedelta(days=1)
 
         return None
