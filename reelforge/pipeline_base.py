@@ -8,13 +8,6 @@ from .categories.base import CategoryBase
 from . import config  # needed for BASE_PATH in _to_rel
 
 
-def _to_rel(path):
-    """Convert an absolute path to relative (relative to BASE_PATH) for JSON storage."""
-    if path and os.path.isabs(path):
-        return os.path.relpath(path, config.BASE_PATH)
-    return path
-
-
 class PipelineBase(ABC):
     def __init__(self, file, category, sync_callback=None):
         self.file = file

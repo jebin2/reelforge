@@ -7,8 +7,9 @@ import os
 import json
 import gc
 import shutil
+from .. import config
 
-TEMP_DIR = os.path.abspath("temp_dir")
+TEMP_DIR = utils.to_abs("temp_dir", config.BASE_PATH)
 
 class TextFrameAligner:
     def __init__(self, cache_path, sentence_model_name='all-mpnet-base-v2'):

@@ -258,7 +258,7 @@ class VideoProcessor(PipelineBase):
         return scene_dialogue_map
 
     def generate_captions(self):
-        captionGen = MultiTypeCaptionGenerator(cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, QwenUIChat, BingUIChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
+        captionGen = MultiTypeCaptionGenerator(frame_base_path=config.BASE_PATH, cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, QwenUIChat, BingUIChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
 
         scene_dialogue_map = captionGen.caption_generation(
             self.generate_frames()
@@ -663,7 +663,7 @@ recap: {full_result["recap"]}.""",
                 if utils.file_exists(new_path):
                     utils.remove_file(new_path)
 
-                cmd = f"{python_path} auto_crop_9x16.py '{os.path.abspath(frame_obj['frame_clip_path'])}' {'anime' if self.category == config.ANIME else 'real'}"
+                cmd = f"{python_path} auto_crop_9x16.py '{utils.to_abs(frame_obj['frame_clip_path'], config.BASE_PATH)}' {'anime' if self.category == config.ANIME else 'real'}"
                 subprocess.run(
                     ["bash", "-c", cmd],
                     cwd=cwd,
@@ -736,16 +736,16 @@ recap: {full_result["recap"]}.""",
         concat_list_path = self.final_video_path + ".concat.txt"
         with open(concat_list_path, "w") as f:
             for frame_obj in best_frames_with_focus_character:
-                f.write(f"file '{os.path.abspath(frame_obj['emoji_added_path'])}'\n")
+                f.write(f"file '{utils.to_abs(frame_obj['emoji_added_path'], config.BASE_PATH)}'\n")
 
         utils.run_ffmpeg([
             "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", os.path.abspath(concat_list_path),
-            "-i", os.path.abspath(merged_audio_path),
+            "-f", "concat", "-safe", "0", "-i", utils.to_abs(concat_list_path, config.BASE_PATH),
+            "-i", utils.to_abs(merged_audio_path, config.BASE_PATH),
             "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-vf", "fps=24",
             "-c:a", "aac",
             "-shortest",
-            os.path.abspath(self.final_video_path)
+            utils.to_abs(self.final_video_path, config.BASE_PATH)
         ])
         os.remove(concat_list_path)
 

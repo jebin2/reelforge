@@ -16,7 +16,7 @@ from reelforge.publisher.publisher_processor import PublisherProcessor
 class ContentCreator:
 
     def __init__(self, local_only=True, remote_only=False, is_publisher=False):
-        self.hf_client = HFBucketClient(bucket_id=config.HF_BUCKET_ID) if config.HF_BUCKET_ID else None
+        self.hf_client = None
         self.local_only = local_only
         self.remote_only = remote_only
         self.is_publisher = is_publisher
@@ -67,13 +67,13 @@ class ContentCreator:
                 logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)} : {file}")
                 
                 # Robust category extraction: first folder after VIDEO_TO_BE_PROCESSED
-                rel_path = os.path.relpath(file, config.VIDEO_TO_BE_PROCESSED)
+                rel_path = utils.to_rel(file, config.VIDEO_TO_BE_PROCESSED)
                 category = rel_path.split(os.sep)[0]
 
                 video_folder = os.path.dirname(file)
-                remote_path = os.path.relpath(video_folder, config.VIDEO_TO_BE_PROCESSED)
+                remote_path = utils.to_rel(video_folder, config.VIDEO_TO_BE_PROCESSED)
                 kwargs = dict(
-                    file=os.path.relpath(file, config.BASE_PATH),
+                    file=utils.to_rel(file, config.BASE_PATH),
                     category=category,
                     sync_callback=lambda lp=video_folder, rp=remote_path: self.sync(lp, rp)
                 )

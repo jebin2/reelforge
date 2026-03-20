@@ -1,4 +1,4 @@
-from jebin_lib import load_env
+from jebin_lib import load_env, utils
 load_env()
 
 import os
@@ -8,57 +8,60 @@ from tqdm import tqdm
 from custom_logger import logger_config
 from jebin_lib import utils
 from reelforge import config
+import zipfile
+import requests
+from tqdm import tqdm as _tqdm
 
 transnetv2_dir = os.path.join(os.path.dirname(config.BASE_PATH), "TransNetV2")
 
 def download_setup_transnetv2():
-	import zipfile
-	import requests
-	from tqdm import tqdm as _tqdm
 
-	pip_name = "TransNetV2"
-	url = "https://huggingface.co/datasets/jebin2/TransNetV2/resolve/main/TransNetV2.zip"
-	zip_path = os.path.join(os.path.dirname(transnetv2_dir), "TransNetV2.zip")
+    pip_name = "TransNetV2"
+    url = "https://huggingface.co/datasets/jebin2/TransNetV2/resolve/main/TransNetV2.zip"
+    zip_path = os.path.join(os.path.dirname(transnetv2_dir), "TransNetV2.zip")
 
-	os.makedirs(transnetv2_dir, exist_ok=True)
+    if not os.path.exists(transnetv2_dir):
+        os.makedirs(transnetv2_dir, exist_ok=True)
 
-	# Download
-	logger_config.info(f"Downloading TransNetV2 from {url}")
-	response = requests.get(url, stream=True)
-	response.raise_for_status()
-	total = int(response.headers.get("content-length", 0))
-	with open(zip_path, "wb") as f, _tqdm(total=total, unit="B", unit_scale=True, desc="TransNetV2.zip") as bar:
-		for chunk in response.iter_content(chunk_size=8192):
-			f.write(chunk)
-			bar.update(len(chunk))
+        # Download
+        logger_config.info(f"Downloading TransNetV2 from {url}")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        total = int(response.headers.get("content-length", 0))
+        with open(zip_path, "wb") as f, _tqdm(total=total, unit="B", unit_scale=True, desc="TransNetV2.zip") as bar:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+                bar.update(len(chunk))
 
-	# Extract directly into transnetv2_dir (zip contains flat files, no subfolder)
-	logger_config.info(f"Extracting to {transnetv2_dir}")
-	with zipfile.ZipFile(zip_path, "r") as zf:
-		zf.extractall(transnetv2_dir)
-	os.remove(zip_path)
-	logger_config.info("TransNetV2 extracted.")
+        # Extract directly into transnetv2_dir (zip contains flat files, no subfolder)
+        logger_config.info(f"Extracting to {transnetv2_dir}")
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(transnetv2_dir)
 
-	# Install dependencies using penv (interactive shell to load aliases)
-	subprocess.run(
-		[
-			"bash",
-			"-ic",
-			f"penv {pip_name} && pip install -e .[{pip_name}]"
-		],
-		check=True,
-		cwd=transnetv2_dir
-	)
-	logger_config.info(f"TransNetV2 dependencies installed.")
+        os.remove(zip_path)
+        logger_config.info("TransNetV2 extracted.")
+
+    # Install dependencies using penv (interactive shell to load aliases)
+    subprocess.run(
+        [
+            "bash",
+            "-ic",
+            f"penv {pip_name} && pip install -e .[{pip_name}]"
+        ],
+        check=True,
+        cwd=transnetv2_dir,
+        stdin=subprocess.DEVNULL,
+        start_new_session=True
+    )
+    logger_config.info(f"TransNetV2 dependencies installed.")
 
 def run_transnetv2(video_path: str, frame_timestamps=None, start_from_sec=-1, end_from_sec=-1, skip_segment = [(None, None)]) -> list:
     utils.get_device()
     transnetv2_dir = os.path.join(os.path.dirname(config.BASE_PATH), "TransNetV2")
 
-    if not os.path.exists(transnetv2_dir):
-        download_setup_transnetv2()
+    download_setup_transnetv2()
 
-    video_path = os.path.abspath(video_path)
+    video_path = utils.to_abs(video_path, config.BASE_PATH)
     scene_txt_path = f"{video_path}.scenes.txt"
 
     if not os.path.exists(scene_txt_path):

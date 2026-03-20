@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import json
 import os
 from .. import config
+from jebin_lib import utils
 
 class CategoryBase(ABC):
     def __init__(self, name, processor_obj):
@@ -53,7 +54,7 @@ class CategoryBase(ABC):
 
         progress = self.processor_obj._get_progress()
         progress.update({
-            "FINAL_VIDEO_PATH": os.path.relpath(
+            "FINAL_VIDEO_PATH": utils.to_rel(
                 self.processor_obj.final_video_path, config.VIDEO_TO_BE_PROCESSED
             ),
             "SHORTS_VIDEO_PATH": None,
