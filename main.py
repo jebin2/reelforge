@@ -16,7 +16,7 @@ from reelforge.publisher.publisher_processor import PublisherProcessor
 class ContentCreator:
 
     def __init__(self, local_only=True, remote_only=False, is_publisher=False):
-        self.hf_client = None
+        self.hf_client = HFBucketClient(bucket_id=config.HF_BUCKET_ID) if config.HF_BUCKET_ID else None
         self.local_only = local_only
         self.remote_only = remote_only
         self.is_publisher = is_publisher
