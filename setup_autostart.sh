@@ -13,7 +13,7 @@ cp "$SCRIPT_DIR/$SERVICE_NAME.service" "$SERVICE_DIR/"
 
 systemctl --user daemon-reload
 systemctl --user enable "$SERVICE_NAME.service"
-systemctl --user start "$SERVICE_NAME.service"
+systemctl --user restart "$SERVICE_NAME.service"
 
 loginctl enable-linger "$USER"
 
