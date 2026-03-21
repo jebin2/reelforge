@@ -620,6 +620,8 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_emotion, f, indent=4, ensure_ascii=False)
+            if self.sync_callback:
+                self.sync_callback()
 
         return best_frames_with_emotion
 
@@ -659,6 +661,8 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_focus_character, f, indent=4, ensure_ascii=False)
+            if self.sync_callback:
+                self.sync_callback()
 
         return best_frames_with_focus_character
 
@@ -690,6 +694,8 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_focus_character, f, indent=4, ensure_ascii=False)
+            if self.sync_callback:
+                self.sync_callback()
 
         self._add_emoji_to_clip(best_frames_with_focus_character)
         return best_frames_with_focus_character
