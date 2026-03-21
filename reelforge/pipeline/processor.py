@@ -373,6 +373,7 @@ recap: {full_result["recap"]}.""",
 
         hf_tts_client = HFTTSClient()
         hf_tts_client.generate_audio_segment(self.generate_recap()["recap"], self.recap_audio_path)
+        utils.copy(self.recap_audio_path, f"{self.recap_audio_path.replace('.wav', '_original.wav')}")
         utils.trim_silence(self.recap_audio_path)
         utils.speed_up_audio(self.recap_audio_path)
 
@@ -576,6 +577,7 @@ recap: {full_result["recap"]}.""",
                     utils.remove_file(audio_path)
 
                 hf_tts_client.generate_audio_segment(frame_obj["recap_sentence"], audio_path)
+                utils.copy(audio_path, f"{audio_path.replace('.wav', '_original.wav')}")
                 utils.trim_silence(audio_path)
                 utils.speed_up_audio(audio_path)
                 frame_obj["audio_path"] = audio_path
