@@ -466,6 +466,9 @@ recap: {full_result["recap"]}.""",
             with open(config.JSON_VALIDATOR_SYSTEM_PROMPT, "r") as f:
                 system_prompt = f.read()
 
+            if not match_scene:
+                raise ValueError("Failed to generate match scene")
+
             logger_config.info("JSON Validator")
             # Sanitize surrogate characters that can't be encoded to UTF-8.
             # Use surrogatepass→replace pattern which reliably strips lone surrogates.
@@ -543,7 +546,7 @@ recap: {full_result["recap"]}.""",
 
         hf_ttt_client = HFTTTClient()
         for i, frame_obj in enumerate(best_frames_with_emotion):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
+            logger_config.info(f"Working on TTT frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
             updated = False
             if "critical_word" not in frame_obj:
                 model_response = json_repair.loads(hf_ttt_client.generate(
@@ -567,7 +570,7 @@ recap: {full_result["recap"]}.""",
         hf_tts_client = HFTTSClient()
 
         for i, frame_obj in enumerate(best_frames_with_emotion):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
+            logger_config.info(f"Working on clip frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
             updated = False
             audio_path = os.path.join(self.sentence_media_dir_path, f"audio_{i}.wav")
             video_path = os.path.join(self.sentence_media_dir_path, f"video_{i}.mp4")
@@ -634,7 +637,7 @@ recap: {full_result["recap"]}.""",
 
     def _add_emoji_to_clip(self, best_frames_with_focus_character):
         for i, frame_obj in enumerate(best_frames_with_focus_character):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
+            logger_config.info(f"Working on emoji frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
             updated = False
             new_path = os.path.join(os.path.dirname(frame_obj["auto_crop_9x16_path"]), "emoji_added_" + os.path.basename(frame_obj["auto_crop_9x16_path"]))
             if "emoji_added_path" not in frame_obj or not utils.is_valid_video(new_path):
@@ -662,7 +665,7 @@ recap: {full_result["recap"]}.""",
         best_frames_with_focus_character = self.create_clip_for_frames()
 
         for i, frame_obj in enumerate(best_frames_with_focus_character):
-            logger_config.info(f"Working on frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
+            logger_config.info(f"Working on char frame {i+1} of {len(best_frames_with_focus_character)}", overwrite=True)
             updated = False
             new_path = os.path.join(os.path.dirname(frame_obj["frame_clip_path"]), "auto_crop_9x16_" + os.path.basename(frame_obj["frame_clip_path"]))
             if "auto_crop_9x16_path" not in frame_obj or not utils.is_valid_video(new_path):
@@ -762,12 +765,118 @@ recap: {full_result["recap"]}.""",
         else:
             raise Exception(f"Failed to generate final video for {self.file}")
 
+    # ------------------------------------------------------------------ remotion
+
+    _REEL_ANIMATIONS = [
+        "ken_burns", "zoom_in", "pan_up", "pan_down", "zoom_out",
+        "punch_in", "breathe", "creep", "burst", "snap",
+    ]
+    _REEL_TRANSITIONS = ["none", "slide", "fade", "toss", "flip", "slide", "wipe", "slide"]
+
+    def generate_remotion_manifest(self, best_frames_with_focus_character):
+        """Build a ReelManifest JSON for remotion-reels from the pipeline output."""
+        full_result = self.generate_recap()
+        title = full_result.get("youtube_title", self.file_base_name_without_ext)
+
+        clips = []
+        for i, frame_obj in enumerate(best_frames_with_focus_character):
+            video_abs = utils.to_abs(frame_obj["auto_crop_9x16_path"], config.BASE_PATH)
+            audio_abs = utils.to_abs(frame_obj["audio_path"], config.BASE_PATH)
+            video_rel = "render_assets/" + os.path.relpath(video_abs, config.BASE_PATH)
+            audio_rel = "render_assets/" + os.path.relpath(audio_abs, config.BASE_PATH)
+
+            clip = {
+                "videoSrc": video_rel,
+                "audioSrc": audio_rel,
+                "durationInSeconds": float(frame_obj["duration"]),
+                "animation": self._REEL_ANIMATIONS[i % len(self._REEL_ANIMATIONS)],
+                "transitionIn": self._REEL_TRANSITIONS[i % len(self._REEL_TRANSITIONS)],
+            }
+            emoji = frame_obj.get("critical_emoji", "")
+            if emoji:
+                clip["emojiText"] = emoji
+
+            clips.append(clip)
+
+        manifest = {
+            "fps": 24,
+            "width": 1080,
+            "height": 1920,
+            "title": title,
+            "clips": clips,
+        }
+
+        manifest_path = os.path.join(self.sentence_media_dir_path, "reels_manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump({"manifest": manifest}, f, indent=4, ensure_ascii=False)
+
+        logger_config.info(f"Reel manifest written: {manifest_path} ({len(clips)} clips)")
+        return manifest_path
+
+    def _ensure_remotion_reels_ready(self, remotion_dir):
+        node_modules = os.path.join(remotion_dir, "node_modules")
+        if not os.path.isdir(node_modules):
+            logger_config.info("Installing remotion-reels npm dependencies...")
+            result = subprocess.run(["npm", "install"], cwd=remotion_dir, capture_output=False)
+            if result.returncode != 0:
+                raise RuntimeError("npm install failed for remotion-reels")
+            logger_config.info("npm install complete.")
+
+    def create_final_video_remotion(self):
+        """Render the final reel using Remotion instead of raw FFmpeg concat."""
+        if utils.is_valid_video(self.final_video_path):
+            return self.final_video_path
+
+        best_frames_with_focus_character = self.focus_characters_clip()
+        manifest_path = self.generate_remotion_manifest(best_frames_with_focus_character)
+
+        remotion_dir = os.path.join(config.BASE_PATH, "remotion-reels")
+        self._ensure_remotion_reels_ready(remotion_dir)
+
+        # Symlink render_assets -> BASE_PATH so staticFile("render_assets/...") resolves
+        public_dir = os.path.join(remotion_dir, "public")
+        os.makedirs(public_dir, exist_ok=True)
+        render_link = os.path.join(public_dir, "render_assets")
+        if os.path.islink(render_link):
+            os.unlink(render_link)
+        os.symlink(config.BASE_PATH, render_link)
+        logger_config.info(f"Symlinked render_assets -> {config.BASE_PATH}")
+
+        output_abs = utils.to_abs(self.final_video_path, config.BASE_PATH)
+        manifest_abs = utils.to_abs(manifest_path, config.BASE_PATH)
+
+        cmd = [
+            "npx", "remotion", "render", "ReelVideo",
+            "--props", manifest_abs,
+            "--output", output_abs,
+            "--codec", "h264",
+            "--log", "verbose",
+        ]
+
+        logger_config.info(f"Running Remotion: {' '.join(cmd)}")
+        try:
+            result = subprocess.run(cmd, cwd=remotion_dir, capture_output=False)
+        finally:
+            if os.path.islink(render_link):
+                os.unlink(render_link)
+                logger_config.info("Cleaned up render_assets symlink.")
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Remotion render failed with exit code {result.returncode}")
+
+        if utils.is_valid_video(self.final_video_path):
+            normalize_loudness(self.final_video_path)
+            ffmpeg_optimise.convert_and_compare(self.final_video_path, f"/tmp/{self.file_base_name_without_ext}.hevc.mp4", overwrite_original=True)
+            return self.final_video_path
+        else:
+            raise Exception(f"Remotion render produced no valid video for {self.file}")
+
     def process(self):
         if self.is_processed():
             logger_config.info(f"Already processed: {self.file}")
             return
 
-        self.create_final_video()
+        self.create_final_video_remotion()
         self.category.create_progress_file()
         if self.sync_callback:
             self.sync_callback()
