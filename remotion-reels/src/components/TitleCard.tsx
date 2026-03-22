@@ -1,56 +1,82 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Audio,
+  Sequence,
+  Video,
+  interpolate,
+  spring,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
+import { ReelClip } from "../types";
 
 interface Props {
   title: string;
+  clips: ReelClip[];
 }
 
-export const TitleCard: React.FC<Props> = ({ title }) => {
+const FLASH_FRAMES = 3;
+
+export const TitleCard: React.FC<Props> = ({ title, clips }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  // Background pulse — subtle radial glow
-  const glowOpacity = interpolate(
-    frame,
-    [0, 20, durationInFrames - 10, durationInFrames],
-    [0, 0.7, 0.7, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  // ── Rapid montage clip index ─────────────────────────────────────────────
+  const montageClip = clips[Math.floor(frame / FLASH_FRAMES) % clips.length];
 
-  // Title punches in with spring
-  const titleSpring = spring({ frame, fps, config: { damping: 14, stiffness: 120 }, durationInFrames: 30 });
-  const titleScale = interpolate(titleSpring, [0, 1], [0.5, 1]);
-  const titleOpacity = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  // ── Dark overlay fades in over the montage ───────────────────────────────
+  const overlayOpacity = interpolate(frame, [10, 35], [0, 0.82], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  // Subtitle slides up from below
-  const subtitleY = interpolate(
-    frame,
-    [10, 30],
-    [40, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const subtitleOpacity = interpolate(frame, [10, 28], [0, 1], { extrapolateRight: "clamp" });
+  // ── Title slams in with spring burst ─────────────────────────────────────
+  const titleSpring = spring({
+    frame: frame - 30,
+    fps,
+    config: { damping: 10, stiffness: 180, mass: 0.6 },
+    durationInFrames: 20,
+  });
+  const titleScale = interpolate(titleSpring, [0, 1], [2.2, 1]);
+  const titleOpacity = interpolate(frame, [30, 38], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  // Whole card fades out at end
+  // ── Title shake (burst energy) ────────────────────────────────────────────
+  const shakeIntensity = interpolate(frame, [30, 38, 50], [14, 4, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const shakeX = Math.sin(frame * 2.7) * shakeIntensity;
+  const shakeY = Math.cos(frame * 3.1) * shakeIntensity;
+
+  // ── Accent line grows under title ────────────────────────────────────────
+  const lineWidth = interpolate(frame, [36, 52], [0, 300], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // ── Rumble fades out when title slams ────────────────────────────────────
+  const rumbleVolume = interpolate(frame, [0, 25, 32], [0.85, 0.85, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // ── Whole card fades out at end ───────────────────────────────────────────
   const cardOpacity = interpolate(
     frame,
-    [durationInFrames - 15, durationInFrames],
+    [durationInFrames - 12, durationInFrames],
     [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
+  const fontSize = title.length > 20 ? 72 : 96;
+
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: "#0a0a0a",
-        opacity: cardOpacity,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-      }}
-    >
+    <AbsoluteFill style={{ opacity: cardOpacity, overflow: "hidden" }}>
       <style>{`
         @font-face {
           font-family: 'Bungee';
@@ -58,67 +84,90 @@ export const TitleCard: React.FC<Props> = ({ title }) => {
         }
       `}</style>
 
-      {/* Radial glow behind title */}
-      <div
-        style={{
-          position: "absolute",
-          width: 700,
-          height: 700,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,60,60,0.35) 0%, transparent 70%)",
-          opacity: glowOpacity,
-        }}
-      />
+      {/* Rapid montage — cycle through clips */}
+      {montageClip?.videoSrc && (
+        <Video
+          src={staticFile(montageClip.videoSrc)}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          startFrom={0}
+          muted
+        />
+      )}
 
-      {/* "RECAP" label */}
-      <div
-        style={{
-          opacity: subtitleOpacity,
-          transform: `translateY(${subtitleY}px)`,
-          fontFamily: "Bungee, sans-serif",
-          fontSize: 36,
-          color: "#ff3c3c",
-          letterSpacing: 12,
-          textTransform: "uppercase",
-          marginBottom: 24,
-        }}
-      >
-        RECAP
-      </div>
+      {/* Dark overlay fades over montage */}
+      <AbsoluteFill style={{ backgroundColor: "#000", opacity: overlayOpacity }} />
 
-      {/* Main title */}
-      <div
+      {/* Red glow behind title */}
+      <AbsoluteFill
         style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           opacity: titleOpacity,
-          transform: `scale(${titleScale})`,
-          transformOrigin: "center center",
-          fontFamily: "Bungee, sans-serif",
-          fontSize: title.length > 20 ? 72 : 96,
-          fontWeight: 900,
-          color: "#ffffff",
-          textTransform: "uppercase",
-          textAlign: "center",
-          lineHeight: 1.1,
-          paddingLeft: 60,
-          paddingRight: 60,
-          filter: "drop-shadow(0px 6px 24px rgba(255,60,60,0.5))",
-          wordBreak: "break-word",
         }}
       >
-        {title}
-      </div>
+        <div
+          style={{
+            position: "absolute",
+            width: 600,
+            height: 600,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,40,40,0.45) 0%, transparent 70%)",
+          }}
+        />
+      </AbsoluteFill>
 
-      {/* Bottom accent line */}
-      <div
+      {/* Content */}
+      <AbsoluteFill
         style={{
-          marginTop: 40,
-          opacity: subtitleOpacity,
-          width: interpolate(frame, [20, 40], [0, 280], { extrapolateRight: "clamp" }),
-          height: 4,
-          background: "linear-gradient(90deg, transparent, #ff3c3c, transparent)",
-          borderRadius: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
         }}
-      />
+      >
+        {/* Main title — slams in */}
+        <div
+          style={{
+            opacity: titleOpacity,
+            transform: `scale(${titleScale}) translate(${shakeX}px, ${shakeY}px)`,
+            transformOrigin: "center center",
+            fontFamily: "Bungee, sans-serif",
+            fontSize,
+            fontWeight: 900,
+            color: "#ffffff",
+            textTransform: "uppercase",
+            textAlign: "center",
+            lineHeight: 1.1,
+            paddingLeft: 60,
+            paddingRight: 60,
+            filter:
+              "drop-shadow(0px 0px 30px rgba(255,40,40,0.9)) drop-shadow(0px 4px 12px rgba(0,0,0,0.8))",
+            wordBreak: "break-word",
+          }}
+        >
+          {title}
+        </div>
+
+        {/* Accent line */}
+        <div
+          style={{
+            marginTop: 32,
+            width: lineWidth,
+            height: 4,
+            background: "linear-gradient(90deg, transparent, #ff3c3c, transparent)",
+            borderRadius: 2,
+          }}
+        />
+      </AbsoluteFill>
+
+      {/* Rumble loop — builds tension during montage, fades out at slam */}
+      <Audio src={staticFile("sfx/sfx_rumble.mp3")} loop volume={rumbleVolume} />
+
+      {/* Impact BAM on title slam */}
+      <Sequence from={30} durationInFrames={durationInFrames - 30} layout="none">
+        <Audio src={staticFile("sfx/sfx_impact.mp3")} volume={0.75} />
+      </Sequence>
     </AbsoluteFill>
   );
 };

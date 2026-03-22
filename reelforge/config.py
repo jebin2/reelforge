@@ -24,6 +24,8 @@ HF_BUCKET_ID = os.getenv("HF_BUCKET_ID")
 TEXT_FONT = BASE_PATH + "/reelforge/Fonts/font_1.ttf"
 
 FPS = 24
+TRANSITION_FRAMES = 18 # must match TRANSITION_FRAMES in remotion-reels/src/transitions.ts
+TRANSITION_DURATION = TRANSITION_FRAMES / FPS
 IMAGE_SIZE = (1920, 1080)
 
 # Prompts
@@ -36,6 +38,7 @@ SCENE_MATCHING_SYSTEM_PROMPT = BASE_PATH + "/reelforge/prompt/scene_matching_sys
 JSON_VALIDATOR_SYSTEM_PROMPT = BASE_PATH + "/reelforge/prompt/json_validator_system_prompt.md"
 KEYWORD_EXTRACT_SYSTEM_PROMPT = BASE_PATH + "/reelforge/prompt/keyword_extract_system_prompt.md"
 CREATE_MUSIC_SYSTEM_PROMPT = BASE_PATH + "/reelforge/prompt/create_music_system_prompt.md"
+CLIP_ANIMATION_SYSTEM_PROMPT = BASE_PATH + "/reelforge/prompt/clip_animation_system_prompt.md"
 
 MODEL_NAME="gemini-3-flash-preview"
 MODEL_NAME_LITE="gemini-flash-lite-latest"

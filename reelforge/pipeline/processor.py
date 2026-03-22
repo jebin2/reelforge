@@ -423,6 +423,82 @@ recap: {full_result["recap"]}.""",
             },
         )
 
+    def _clip_animation_schema(self):
+        return genai.types.Schema(
+            type = genai.types.Type.OBJECT,
+            required = ["clips"],
+            properties = {
+                "clips": genai.types.Schema(
+                    type = genai.types.Type.ARRAY,
+                    items = genai.types.Schema(
+                        type = genai.types.Type.OBJECT,
+                        required = ["clip_index", "animation", "transitionIn"],
+                        properties = {
+                            "clip_index": genai.types.Schema(type=genai.types.Type.INTEGER),
+                            "animation": genai.types.Schema(type=genai.types.Type.STRING),
+                            "transitionIn": genai.types.Schema(type=genai.types.Type.STRING),
+                            "reasoning": genai.types.Schema(type=genai.types.Type.STRING),
+                        },
+                    ),
+                ),
+            },
+        )
+
+    def pick_clip_animations(self, clips_data):
+        """Use LLM to assign per-clip animation and transition types."""
+        output_path = os.path.join(self.sentence_media_dir_path, "clip_animations.json")
+
+        if utils.is_valid_json(output_path):
+            with open(output_path, "r") as f:
+                cached = json.load(f)
+            if isinstance(cached, list) and len(cached) == len(clips_data):
+                logger_config.info(f"clip_animations.json loaded ({len(cached)} clips), skipping LLM.")
+                return cached
+
+        with open(config.CLIP_ANIMATION_SYSTEM_PROMPT, "r") as f:
+            system_prompt = f.read()
+
+        user_prompt = json.dumps({
+            "show_name": self.file_base_name_without_ext,
+            "clips": [
+                {
+                    "clip_index": i,
+                    "narration_text": c["narration_text"],
+                    "duration_seconds": round(c["duration_seconds"], 2),
+                    "words": c.get("words", []),
+                }
+                for i, c in enumerate(clips_data)
+            ],
+        }, ensure_ascii=False)
+
+        parsed = None
+        try_times = 0
+        while try_times < 3 and parsed is None:
+            try_times += 1
+            try:
+                geminiWrapper = pre_model_wrapper(
+                    system_instruction=system_prompt,
+                    schema=self._clip_animation_schema(),
+                    delete_files=True
+                )
+                response = geminiWrapper.send_message(user_prompt=user_prompt)
+                parsed = json_repair.loads(response[0])
+            except Exception as e:
+                logger_config.error(f"pick_clip_animations attempt {try_times} failed: {e}")
+
+        if parsed is None or "clips" not in parsed:
+            raise ValueError("Failed to get clip animations from LLM")
+
+        animations = parsed["clips"]
+        if len(animations) != len(clips_data):
+            raise ValueError(f"Animation count mismatch: got {len(animations)}, expected {len(clips_data)}")
+
+        with open(output_path, "w") as f:
+            json.dump(animations, f, indent=4, ensure_ascii=False)
+
+        logger_config.info(f"Clip animations: {[a.get('animation') for a in animations]}")
+        return animations
+
     def _only_scene_caption_dialogue(self):
         data = self.generate_captions()
         return [
@@ -570,6 +646,7 @@ recap: {full_result["recap"]}.""",
     def create_clip_for_frames(self):
         best_frames_with_emotion = self.choose_emojis()
         hf_tts_client = HFTTSClient()
+        hf_stt_client = HFSTTClient()
 
         for i, frame_obj in enumerate(best_frames_with_emotion):
             logger_config.info(f"Working on clip frame {i+1} of {len(best_frames_with_emotion)}", overwrite=True)
@@ -586,6 +663,14 @@ recap: {full_result["recap"]}.""",
                 utils.trim_silence(audio_path)
                 utils.speed_up_audio(audio_path)
                 frame_obj["audio_path"] = audio_path
+                updated = True
+
+            if "transcription" not in frame_obj:
+                transcription_path = hf_stt_client.transcribe(audio_path)
+                with open(transcription_path, "r") as f:
+                    transcription = json.load(f)
+                    transcription = transcription["segments"]["word"]
+                frame_obj["transcription"] = transcription
                 updated = True
 
             if "duration" not in frame_obj:
@@ -697,7 +782,7 @@ recap: {full_result["recap"]}.""",
             if self.sync_callback:
                 self.sync_callback()
 
-        self._add_emoji_to_clip(best_frames_with_focus_character)
+        # self._add_emoji_to_clip(best_frames_with_focus_character)
         return best_frames_with_focus_character
 
     def create_bg_music(self):
@@ -775,16 +860,23 @@ recap: {full_result["recap"]}.""",
 
     # ------------------------------------------------------------------ remotion
 
-    _REEL_ANIMATIONS = [
-        "ken_burns", "zoom_in", "pan_up", "pan_down", "zoom_out",
-        "punch_in", "breathe", "creep", "burst", "snap",
-    ]
-    _REEL_TRANSITIONS = ["none", "slide", "fade", "toss", "flip", "slide", "wipe", "slide"]
-
     def generate_remotion_manifest(self, best_frames_with_focus_character):
         """Build a ReelManifest JSON for remotion-reels from the pipeline output."""
         full_result = self.generate_recap()
         title = full_result.get("youtube_title", self.file_base_name_without_ext)
+
+        # Build input for LLM animation picker
+        clips_data = [
+            {
+                "narration_text": frame_obj.get("recap_sentence", ""),
+                "duration_seconds": float(frame_obj["duration"]),
+                "words": frame_obj.get("transcription", []),
+            }
+            for frame_obj in best_frames_with_focus_character
+        ]
+        animations = self.pick_clip_animations(clips_data)
+        anim_by_index = {a["clip_index"]: a for a in animations}
+        transition_by_index = {a["clip_index"]: a.get("transitionIn", "none") for a in animations}
 
         clips = []
         for i, frame_obj in enumerate(best_frames_with_focus_character):
@@ -792,17 +884,24 @@ recap: {full_result["recap"]}.""",
             audio_abs = utils.to_abs(frame_obj["audio_path"], config.BASE_PATH)
             video_rel = "render_assets/" + os.path.relpath(video_abs, config.BASE_PATH)
             audio_rel = "render_assets/" + os.path.relpath(audio_abs, config.BASE_PATH)
+            anim_info = anim_by_index.get(i, {})
+
+            next_transition_in = transition_by_index.get(i + 1, "none") if (i + 1) < len(best_frames_with_focus_character) else "none"
+            clip_duration = float(frame_obj["duration"])
+            if next_transition_in != "none":
+                clip_duration += config.TRANSITION_DURATION
 
             clip = {
                 "videoSrc": video_rel,
                 "audioSrc": audio_rel,
-                "durationInSeconds": float(frame_obj["duration"]),
-                "animation": self._REEL_ANIMATIONS[i % len(self._REEL_ANIMATIONS)],
-                "transitionIn": self._REEL_TRANSITIONS[i % len(self._REEL_TRANSITIONS)],
+                "durationInSeconds": clip_duration,
+                "animation": anim_info.get("animation", "ken_burns"),
+                "transitionIn": anim_info.get("transitionIn", "none"),
+                "wordTimings": frame_obj.get("transcription", []),
             }
-            emoji = frame_obj.get("critical_emoji", "")
-            if emoji:
-                clip["emojiText"] = emoji
+            # emoji = frame_obj.get("critical_emoji", "")
+            # if emoji:
+            #     clip["emojiText"] = emoji
 
             clips.append(clip)
 

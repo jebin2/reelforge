@@ -1,12 +1,12 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import { TransitionSeries, springTiming } from "@remotion/transitions";
-import { ReelClip, ReelManifest } from "../types";
+import { ReelManifest } from "../types";
 import { ClipWithOverlays } from "./ClipWithOverlays";
 import { TitleCard } from "./TitleCard";
-import { getPresentation, TRANSITION_FRAMES } from "../transitions";
+import { getPresentation, TRANSITION_FRAMES } from "remotion-animation-kit";
 
-const TITLE_CARD_FRAMES = 60; // 2.5s title card at start
+const TITLE_CARD_FRAMES = 60;
 
 export function getTotalFrames(manifest: ReelManifest): number {
   const clipFrames = manifest.clips.reduce((sum, clip, i) => {
@@ -26,12 +26,10 @@ export const ReelSequences: React.FC<Props> = ({ manifest }) => {
 
   return (
     <AbsoluteFill>
-      {/* Animated title card — always first */}
       <Sequence from={0} durationInFrames={TITLE_CARD_FRAMES} layout="none">
-        <TitleCard title={title} />
+        <TitleCard title={title} clips={clips} />
       </Sequence>
 
-      {/* Clips with transitions */}
       <Sequence from={TITLE_CARD_FRAMES} layout="none">
         <TransitionSeries>
           {clips.map((clip, i) => {
