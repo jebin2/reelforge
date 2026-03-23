@@ -1,5 +1,5 @@
 import React from "react";
-import { Video, staticFile } from "remotion";
+import { OffthreadVideo, staticFile } from "remotion";
 import { AnimatedBase } from "remotion-animation-kit";
 import type { BaseAnimationProps } from "remotion-animation-kit";
 import { ReelClip } from "../types";
@@ -10,7 +10,7 @@ interface Props extends BaseAnimationProps {
 
 export const ClipBase: React.FC<Props> = ({ clip, ...animProps }) => {
   const background = clip.videoSrc ? (
-    <Video
+    <OffthreadVideo
       src={staticFile(clip.videoSrc)}
       style={{
         position: "absolute",
@@ -26,7 +26,7 @@ export const ClipBase: React.FC<Props> = ({ clip, ...animProps }) => {
   return (
     <AnimatedBase {...animProps} background={background} audioSrc={clip.audioSrc}>
       {clip.videoSrc && (
-        <Video
+        <OffthreadVideo
           src={staticFile(clip.videoSrc)}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
         />
