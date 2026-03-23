@@ -4,7 +4,7 @@ import shutil
 from custom_logger import logger_config
 from ..pipeline_base import PipelineBase
 from .. import config
-
+from jebin_lib import utils
 
 class PublisherProcessor(PipelineBase):
     def __init__(self, file, category, sync_callback=None, force_sync_callback=None):
@@ -46,7 +46,7 @@ class PublisherProcessor(PipelineBase):
             if not entry.is_dir() or entry.path == self.file_parent_dir_path:
                 continue
             progress_file = os.path.join(entry.path, "progress.json")
-            if not os.path.exists(progress_file):
+            if not utils.file_exists(progress_file):
                 continue
             try:
                 with open(progress_file) as f:
@@ -76,8 +76,8 @@ class PublisherProcessor(PipelineBase):
             logger_config.warning(f"Not processed: {self.file}, skipping.")
             return
 
-        final_video_path = os.path.join(config.CONTENT_TO_BE_PROCESSED, progress.get("FINAL_VIDEO_PATH", ""))
-        if not os.path.exists(final_video_path):
+        final_video_path = utils.to_abs(progress.get("FINAL_VIDEO_PATH", ""), config.BASE_PATH)
+        if not utils.file_exists(final_video_path):
             logger_config.warning(f"Final video not found: {final_video_path}, skipping.")
             return
 
@@ -100,19 +100,16 @@ class PublisherProcessor(PipelineBase):
             from .youtube_publusher import YoutubePublisher
             yt = YoutubePublisher(self)
 
-            thumbnail_path = progress.get("THUMBNAIL_PATH")
-            thumbnail_full_path = os.path.join(config.CONTENT_TO_BE_PROCESSED, thumbnail_path) if thumbnail_path else None
-            if thumbnail_full_path and not os.path.exists(thumbnail_full_path):
-                thumbnail_full_path = None
+            thumbnail_path = utils.to_abs(progress.get("THUMBNAIL_PATH", ""), config.BASE_PATH)
+            if thumbnail_path and not utils.file_exists(thumbnail_path):
+                thumbnail_path = None
 
-            if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc, thumbnail_path=thumbnail_full_path):
+            if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc, thumbnail_path=thumbnail_path):
                 published = True
 
-            shorts_video_path = progress.get("SHORTS_VIDEO_PATH")
-            if shorts_video_path:
-                shorts_full_path = os.path.join(config.CONTENT_TO_BE_PROCESSED, shorts_video_path)
-                if os.path.exists(shorts_full_path):
-                    yt.publish(progress, shorts_full_path, publish_at_utc=publish_at_utc)
+            shorts_video_path = utils.to_abs(progress.get("SHORTS_VIDEO_PATH", ""), config.BASE_PATH)
+            if shorts_video_path and utils.file_exists(shorts_video_path):
+                yt.publish(progress, shorts_video_path, publish_at_utc=publish_at_utc)
 
         if self.category.allowed_to_publish_in_twitter():
             from .twitter_publisher import TwitterPublisher
