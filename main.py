@@ -81,7 +81,7 @@ class ContentCreator:
                     kwargs['force_sync_callback'] = lambda lp=video_folder, rp=remote_path: self.force_sync(lp, rp)
                 pipeline_instance = pipeline(**kwargs)
                 if self.is_publisher or pipeline_instance.allowed_create():
-                    pipeline_instance.process()
+                    pipeline_instance.run()
             except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())

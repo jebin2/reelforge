@@ -7,6 +7,8 @@ from jebin_lib import utils
 from .categories.base import CategoryBase
 from . import config  # needed for BASE_PATH in _to_rel
 
+LOCK_FILE = ".lock"
+
 
 class PipelineBase(ABC):
     def __init__(self, file, category, sync_callback=None):
@@ -73,11 +75,43 @@ class PipelineBase(ABC):
         progress_json = self._get_progress()
         return progress_json.get("PUBLISHED", False)
 
+    def _acquire_lock(self) -> bool:
+        lock_path = os.path.join(self.file_parent_dir_path, LOCK_FILE)
+        try:
+            with open(lock_path, 'x') as f:
+                f.write(str(os.getpid()))
+            return True
+        except FileExistsError:
+            try:
+                with open(lock_path) as f:
+                    pid = int(f.read().strip())
+                os.kill(pid, 0)
+                return False
+            except (ProcessLookupError, ValueError, OSError):
+                os.remove(lock_path)
+                return self._acquire_lock()
+
+    def _release_lock(self):
+        lock_path = os.path.join(self.file_parent_dir_path, LOCK_FILE)
+        try:
+            os.remove(lock_path)
+        except FileNotFoundError:
+            pass
+
+    def run(self):
+        if not self._acquire_lock():
+            logger_config.warning(f"Folder locked by another process, skipping: {self.file_parent_dir_path}")
+            return
+        try:
+            self.process()
+        finally:
+            self._release_lock()
+
     def _wrap_methods(self):
         if not self.sync_callback:
             return
         for attr_name in dir(self.__class__):
-            if attr_name.startswith('_') or attr_name in ["is_processed", "is_published", "set_all_paths", "get_service", "set_service", "allowed_create", "process"]:
+            if attr_name.startswith('_') or attr_name in ["is_processed", "is_published", "set_all_paths", "get_service", "set_service", "allowed_create", "process", "run"]:
                 continue
             attr = getattr(self, attr_name)
             if callable(attr):

@@ -19,8 +19,11 @@ class PublisherProcessor(PipelineBase):
         self.services[key] = service
 
     def _cleanup_folder(self):
+        from ..pipeline_base import LOCK_FILE
         for entry in os.scandir(self.file_parent_dir_path):
             if entry.path == self.progress_path:
+                continue
+            if entry.name == LOCK_FILE:
                 continue
             if entry.is_dir(follow_symlinks=False):
                 shutil.rmtree(entry.path)
