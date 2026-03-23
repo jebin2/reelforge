@@ -3,8 +3,7 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { TransitionSeries, springTiming } from "@remotion/transitions";
 import { ReelManifest } from "../types";
 import { ClipWithOverlays } from "./ClipWithOverlays";
-import { TitleCard } from "./TitleCard";
-import { getPresentation, TRANSITION_FRAMES } from "remotion-animation-kit";
+import { getPresentation, TRANSITION_FRAMES, TitleCard } from "remotion-animation-kit";
 
 const TITLE_CARD_FRAMES = 60;
 
