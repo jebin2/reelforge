@@ -7,7 +7,12 @@ from jebin_lib import utils
 from .categories.base import CategoryBase
 from . import config  # needed for BASE_PATH in _to_rel
 
-LOCK_FILE = ".lock"
+import hashlib
+import tempfile
+
+def _lock_path_for(folder: str) -> str:
+    key = hashlib.md5(os.path.abspath(folder).encode()).hexdigest()
+    return os.path.join(tempfile.gettempdir(), f"reelforge_{key}.lock")
 
 
 class PipelineBase(ABC):
@@ -76,7 +81,7 @@ class PipelineBase(ABC):
         return progress_json.get("PUBLISHED", False)
 
     def _acquire_lock(self) -> bool:
-        lock_path = os.path.join(self.file_parent_dir_path, LOCK_FILE)
+        lock_path = _lock_path_for(self.file_parent_dir_path)
         try:
             with open(lock_path, 'x') as f:
                 f.write(str(os.getpid()))
@@ -92,7 +97,7 @@ class PipelineBase(ABC):
                 return self._acquire_lock()
 
     def _release_lock(self):
-        lock_path = os.path.join(self.file_parent_dir_path, LOCK_FILE)
+        lock_path = _lock_path_for(self.file_parent_dir_path)
         try:
             os.remove(lock_path)
         except FileNotFoundError:
