@@ -25,7 +25,7 @@ class ContentCreator:
     def setup(self):
         if self.hf_client:
             for category in config.CATEGORY:
-                local_cat_path = os.path.join(config.VIDEO_TO_BE_PROCESSED, category)
+                local_cat_path = os.path.join(config.CONTENT_TO_BE_PROCESSED, category)
                 if self.is_publisher:
                     if category not in [config.COMIC, config.CHESS]:
                         continue
@@ -49,7 +49,7 @@ class ContentCreator:
             self.hf_client.upload_folder(local_path, remote_path, delete=True)
 
     def run(self):
-        all_files = utils.list_files_recursive(config.VIDEO_TO_BE_PROCESSED)
+        all_files = utils.list_files_recursive(config.CONTENT_TO_BE_PROCESSED)
         if self.is_publisher:
             # For publisher: scan progress.json files; PublisherProcessor reads FINAL_VIDEO_PATH from them
             video_files = [f for f in all_files if os.path.basename(f) == "progress.json"]
@@ -66,12 +66,12 @@ class ContentCreator:
                 pipeline = PublisherProcessor if self.is_publisher else VideoProcessor
                 logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)} : {file}")
                 
-                # Robust category extraction: first folder after VIDEO_TO_BE_PROCESSED
-                rel_path = utils.to_rel(file, config.VIDEO_TO_BE_PROCESSED)
+                # Robust category extraction: first folder after CONTENT_TO_BE_PROCESSED
+                rel_path = utils.to_rel(file, config.CONTENT_TO_BE_PROCESSED)
                 category = rel_path.split(os.sep)[0]
 
                 video_folder = os.path.dirname(file)
-                remote_path = utils.to_rel(video_folder, config.VIDEO_TO_BE_PROCESSED)
+                remote_path = utils.to_rel(video_folder, config.CONTENT_TO_BE_PROCESSED)
                 kwargs = dict(
                     file=utils.to_rel(file, config.BASE_PATH),
                     category=category,

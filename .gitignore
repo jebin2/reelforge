@@ -1,4 +1,4 @@
-video_to_be_processed/
+content_to_be_processed*/
 temp/
 temp_*/
 thread_id_*/__pycache__/
@@ -7,7 +7,6 @@ thread_id_*/__pycache__/
 cc_youtube_auto_pub/
 .env
 video_recap/__pycache__
-video_to_be_processed copy/
 thread_id_*/
 chess/__pycache__/
 chat_bot_ui_handler_logs/
