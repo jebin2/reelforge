@@ -258,7 +258,7 @@ class VideoProcessor(PipelineBase):
         return scene_dialogue_map
 
     def generate_captions(self):
-        captionGen = MultiTypeCaptionGenerator(frame_base_path=config.BASE_PATH, cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, QwenUIChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
+        captionGen = MultiTypeCaptionGenerator(frame_base_path=config.BASE_PATH, cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
 
         scene_dialogue_map = captionGen.caption_generation(
             self.generate_frames()
