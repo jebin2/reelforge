@@ -3,9 +3,9 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { TransitionSeries, springTiming } from "@remotion/transitions";
 import { ReelManifest } from "../types";
 import { ClipWithOverlays } from "./ClipWithOverlays";
-import { getPresentation, TRANSITION_FRAMES, TitleCard } from "remotion-animation-kit";
+import { getPresentation, TRANSITION_FRAMES, TitleCard, getTitleCardDuration } from "remotion-animation-kit";
 
-const TITLE_CARD_FRAMES = 60;
+const TITLE_CARD_FRAMES = getTitleCardDuration(24);
 
 export function getTotalFrames(manifest: ReelManifest): number {
   const clipFrames = manifest.clips.reduce((sum, clip, i) => {
@@ -22,7 +22,6 @@ interface Props {
 
 export const ReelSequences: React.FC<Props> = ({ manifest }) => {
   const { fps, clips, title } = manifest;
-
   return (
     <AbsoluteFill>
       <Sequence from={0} durationInFrames={TITLE_CARD_FRAMES} layout="none">
