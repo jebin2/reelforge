@@ -25,8 +25,8 @@ from jebin_lib import video_optimizer as ffmpeg_optimise
 from ..pipeline_base import PipelineBase
 
 class VideoProcessor(PipelineBase):
-    def __init__(self, file, category, sync_callback=None):
-        super().__init__(file, category, sync_callback)
+    def __init__(self, file, category):
+        super().__init__(file, category)
 
     def get_compressed_file(self):
         """
@@ -638,8 +638,6 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_emotion, f, indent=4, ensure_ascii=False)
-            if self.sync_callback:
-                self.sync_callback()
 
         return best_frames_with_emotion
 
@@ -705,8 +703,6 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_emotion, f, indent=4, ensure_ascii=False)
-            if self.sync_callback:
-                self.sync_callback()
 
         return best_frames_with_emotion
 
@@ -746,8 +742,6 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_focus_character, f, indent=4, ensure_ascii=False)
-            if self.sync_callback:
-                self.sync_callback()
 
         return best_frames_with_focus_character
 
@@ -779,8 +773,6 @@ recap: {full_result["recap"]}.""",
             if updated:
                 with open(self.choose_best_frames_json_path, "w") as f:
                     json.dump(best_frames_with_focus_character, f, indent=4, ensure_ascii=False)
-            if self.sync_callback:
-                self.sync_callback()
 
         # self._add_emoji_to_clip(best_frames_with_focus_character)
         return best_frames_with_focus_character
@@ -985,5 +977,3 @@ recap: {full_result["recap"]}.""",
 
         self.create_final_video_remotion()
         self.category.create_progress_file()
-        if self.sync_callback:
-            self.sync_callback()

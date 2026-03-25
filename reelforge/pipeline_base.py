@@ -16,11 +16,9 @@ def _lock_path_for(folder: str) -> str:
 
 
 class PipelineBase(ABC):
-    def __init__(self, file, category, sync_callback=None):
+    def __init__(self, file, category):
         self.file = file
         self.category = CategoryBase.get_category(category, self)
-        self.sync_callback = sync_callback
-        self._wrap_methods()
         self.set_all_paths()
 
 
@@ -111,25 +109,6 @@ class PipelineBase(ABC):
             self.process()
         finally:
             self._release_lock()
-
-    def _wrap_methods(self):
-        if not self.sync_callback:
-            return
-        for attr_name in dir(self.__class__):
-            if attr_name.startswith('_') or attr_name in ["is_processed", "is_published", "set_all_paths", "get_service", "set_service", "allowed_create", "process", "run"]:
-                continue
-            attr = getattr(self, attr_name)
-            if callable(attr):
-                setattr(self, attr_name, self._create_sync_wrapper(attr))
-
-    def _create_sync_wrapper(self, func):
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-            if self.sync_callback:
-                logger_config.info(f"Sync callback for {func.__name__}")
-                self.sync_callback()
-            return result
-        return wrapper
 
     @abstractmethod
     def process(self):

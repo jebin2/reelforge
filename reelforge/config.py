@@ -20,6 +20,8 @@ COMIC="comic"
 CATEGORY=[ANIME, MOVIE, CHESS, COMIC]
 
 HF_BUCKET_ID = os.getenv("HF_BUCKET_ID")
+HF_TOKEN = os.getenv("HF_TOKEN")
+HF_MOUNT_PATH = os.getenv("HF_MOUNT_PATH")
 
 TEXT_FONT = BASE_PATH + "/reelforge/Fonts/font_1.ttf"
 

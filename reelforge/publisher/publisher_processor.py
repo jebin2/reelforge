@@ -7,10 +7,9 @@ from .. import config
 from jebin_lib import utils
 
 class PublisherProcessor(PipelineBase):
-    def __init__(self, file, category, sync_callback=None, force_sync_callback=None):
-        super().__init__(file, category, sync_callback)
+    def __init__(self, file, category):
+        super().__init__(file, category)
         self.services = {}
-        self.force_sync_callback = force_sync_callback or sync_callback
 
     def get_service(self, key):
         return self.services.get(key)
@@ -63,8 +62,6 @@ class PublisherProcessor(PipelineBase):
         if self.is_published():
             logger_config.info(f"Already published: {self.file}")
             self._cleanup_folder()
-            if self.force_sync_callback:
-                self.force_sync_callback()
             return
 
         progress = self._get_progress()
@@ -120,5 +117,3 @@ class PublisherProcessor(PipelineBase):
         if published:
             self._mark_published(publish_at_ist=publish_at_ist)
             self._cleanup_folder()
-            if self.force_sync_callback:
-                self.force_sync_callback()
