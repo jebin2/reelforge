@@ -1,10 +1,11 @@
-from jebin_lib import load_env, utils, ensure_hf_mounted
+from jebin_lib import load_env, utils, ensure_hf_mounted, remount_hf
 load_env()
 
 import gc
 import sys
 import os
 import traceback
+from custom_logger import logger_config
 
 from reelforge import config
 from reelforge.pipeline.processor import VideoProcessor
@@ -37,11 +38,18 @@ class ContentCreator:
                 category = rel_path.split(os.sep)[0]
 
                 pipeline_instance = pipeline(
-                    file=utils.to_rel(file, config.BASE_PATH),
+                    file=utils.to_rel(file, config.CONTENT_TO_BE_PROCESSED),
                     category=category,
                 )
                 if self.is_publisher or pipeline_instance.allowed_create():
                     pipeline_instance.run()
+            except OSError as e:
+                if e.errno == 116:
+                    logger_config.warning(f"Stale file handle detected, remounting and will retry: {file}")
+                    remount_hf(config.HF_BUCKET_ID, config.HF_TOKEN, config.HF_MOUNT_PATH)
+                else:
+                    logger_config.error(f"Failed to process {file}: {e}")
+                    logger_config.error(traceback.format_exc())
             except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())
