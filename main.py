@@ -1,4 +1,4 @@
-from jebin_lib import load_env, utils, ensure_hf_mounted, remount_hf, cleanup_stale_files
+from jebin_lib import load_env, utils, ensure_hf_mounted
 load_env()
 
 import gc
@@ -44,15 +44,6 @@ class ContentCreator:
                 )
                 if self.is_publisher or pipeline_instance.allowed_create():
                     pipeline_instance.run()
-            except OSError as e:
-                if e.errno == 116:
-                    logger_config.warning(f"Stale file handle detected, remounting and cleaning stale entries: {file}")
-                    remount_hf(config.HF_BUCKET_ID, config.HF_TOKEN, config.HF_MOUNT_PATH)
-                    if hasattr(pipeline_instance, 'file_parent_dir_path'):
-                        cleanup_stale_files(pipeline_instance.file_parent_dir_path)
-                else:
-                    logger_config.error(f"Failed to process {file}: {e}")
-                    logger_config.error(traceback.format_exc())
             except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")
                 logger_config.error(traceback.format_exc())

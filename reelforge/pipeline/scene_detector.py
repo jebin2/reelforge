@@ -61,7 +61,7 @@ def run_transnetv2(video_path: str, frame_timestamps=None, start_from_sec=-1, en
 
     download_setup_transnetv2()
 
-    video_path = utils.to_abs(video_path, config.BASE_PATH)
+    video_path = utils.to_abs(video_path, config.CONTENT_TO_BE_PROCESSED)
     scene_txt_path = f"{video_path}.scenes.txt"
 
     if not os.path.exists(scene_txt_path):

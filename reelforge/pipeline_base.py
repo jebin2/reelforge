@@ -23,7 +23,8 @@ class PipelineBase(ABC):
 
 
     def set_all_paths(self):
-        # all paths
+        # resolve to absolute so all derived paths are correct regardless of cwd
+        self.file = utils.to_abs(self.file, config.CONTENT_TO_BE_PROCESSED)
         self.file_parent_dir_path = os.path.dirname(self.file)
         self.file_base_name_without_ext = os.path.splitext(os.path.basename(self.file))[0]
         self.file_base_name_with_ext = os.path.basename(self.file)

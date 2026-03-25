@@ -73,7 +73,7 @@ class PublisherProcessor(PipelineBase):
             logger_config.warning(f"Not processed: {self.file}, skipping.")
             return
 
-        final_video_path = utils.to_abs(progress.get("FINAL_VIDEO_PATH", ""), config.BASE_PATH)
+        final_video_path = utils.to_abs(progress.get("FINAL_VIDEO_PATH", ""), config.CONTENT_TO_BE_PROCESSED)
         if not utils.file_exists(final_video_path):
             logger_config.warning(f"Final video not found: {final_video_path}, skipping.")
             return
@@ -97,14 +97,14 @@ class PublisherProcessor(PipelineBase):
             from .youtube_publusher import YoutubePublisher
             yt = YoutubePublisher(self)
 
-            thumbnail_path = utils.to_abs(progress.get("THUMBNAIL_PATH", ""), config.BASE_PATH)
+            thumbnail_path = utils.to_abs(progress.get("THUMBNAIL_PATH", ""), config.CONTENT_TO_BE_PROCESSED)
             if thumbnail_path and not utils.file_exists(thumbnail_path):
                 thumbnail_path = None
 
             if yt.publish(progress, final_video_path, publish_at_utc=publish_at_utc, thumbnail_path=thumbnail_path):
                 published = True
 
-            shorts_video_path = utils.to_abs(progress.get("SHORTS_VIDEO_PATH", ""), config.BASE_PATH)
+            shorts_video_path = utils.to_abs(progress.get("SHORTS_VIDEO_PATH", ""), config.CONTENT_TO_BE_PROCESSED)
             if shorts_video_path and utils.file_exists(shorts_video_path):
                 yt.publish(progress, shorts_video_path, publish_at_utc=publish_at_utc)
 

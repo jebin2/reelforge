@@ -11,6 +11,8 @@ find /tmp -maxdepth 1 -name "neko_port_state.*" -mmin +720 -exec sudo rm -f {} +
 
 # Kill any existing instance of this app
 pkill -f "reelforge_env/.*python main.py $*$" 2>/dev/null || true
+sleep 1
+find /tmp -maxdepth 1 -name "reelforge_*.lock" -exec rm -f {} +
 
 RESERVED=2
 TOTAL=$(nproc)

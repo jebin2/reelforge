@@ -258,7 +258,7 @@ class VideoProcessor(PipelineBase):
         return scene_dialogue_map
 
     def generate_captions(self):
-        captionGen = MultiTypeCaptionGenerator(frame_base_path=config.BASE_PATH, cache_path=self.caption_generator_dir_path, sources=[GoogleAISearchChat, BraveAISearch, DuckDuckGoAISearch], FYI=self.category.get_fyi(self.file_base_name_without_ext))
+        captionGen = MultiTypeCaptionGenerator(frame_base_path=config.CONTENT_TO_BE_PROCESSED, cache_path=self.caption_generator_dir_path, sources=[AIStudioUIChat], FYI=self.category.get_fyi(self.file_base_name_without_ext))
 
         scene_dialogue_map = captionGen.caption_generation(
             self.generate_frames()
@@ -757,7 +757,7 @@ recap: {full_result["recap"]}.""",
                 if utils.file_exists(new_path):
                     utils.remove_file(new_path)
 
-                cmd = f"{python_path} auto_crop_9x16.py '{utils.to_abs(frame_obj['frame_clip_path'], config.BASE_PATH)}' {'anime' if self.category == config.ANIME else 'real'}"
+                cmd = f"{python_path} auto_crop_9x16.py '{utils.to_abs(frame_obj['frame_clip_path'], config.CONTENT_TO_BE_PROCESSED)}' {'anime' if self.category == config.ANIME else 'real'}"
                 subprocess.run(
                     ["bash", "-c", cmd],
                     cwd=cwd,
@@ -830,16 +830,16 @@ recap: {full_result["recap"]}.""",
         concat_list_path = self.final_video_path + ".concat.txt"
         with open(concat_list_path, "w") as f:
             for frame_obj in best_frames_with_focus_character:
-                f.write(f"file '{utils.to_abs(frame_obj['emoji_added_path'], config.BASE_PATH)}'\n")
+                f.write(f"file '{utils.to_abs(frame_obj['emoji_added_path'], config.CONTENT_TO_BE_PROCESSED)}'\n")
 
         utils.run_ffmpeg([
             "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", utils.to_abs(concat_list_path, config.BASE_PATH),
-            "-i", utils.to_abs(merged_audio_path, config.BASE_PATH),
+            "-f", "concat", "-safe", "0", "-i", utils.to_abs(concat_list_path, config.CONTENT_TO_BE_PROCESSED),
+            "-i", utils.to_abs(merged_audio_path, config.CONTENT_TO_BE_PROCESSED),
             "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-vf", "fps=24",
             "-c:a", "aac",
             "-shortest",
-            utils.to_abs(self.final_video_path, config.BASE_PATH)
+            utils.to_abs(self.final_video_path, config.CONTENT_TO_BE_PROCESSED)
         ])
         os.remove(concat_list_path)
 
@@ -872,10 +872,10 @@ recap: {full_result["recap"]}.""",
 
         clips = []
         for i, frame_obj in enumerate(best_frames_with_focus_character):
-            video_abs = utils.to_abs(frame_obj["auto_crop_9x16_path"], config.BASE_PATH)
-            audio_abs = utils.to_abs(frame_obj["audio_path"], config.BASE_PATH)
-            video_rel = "render_assets/" + os.path.relpath(video_abs, config.BASE_PATH)
-            audio_rel = "render_assets/" + os.path.relpath(audio_abs, config.BASE_PATH)
+            video_abs = utils.to_abs(frame_obj["auto_crop_9x16_path"], config.CONTENT_TO_BE_PROCESSED)
+            audio_abs = utils.to_abs(frame_obj["audio_path"], config.CONTENT_TO_BE_PROCESSED)
+            video_rel = "render_assets/" + os.path.relpath(video_abs, config.CONTENT_TO_BE_PROCESSED)
+            audio_rel = "render_assets/" + os.path.relpath(audio_abs, config.CONTENT_TO_BE_PROCESSED)
             anim_info = anim_by_index.get(i, {})
 
             next_transition_in = transition_by_index.get(i + 1, "none") if (i + 1) < len(best_frames_with_focus_character) else "none"
@@ -938,11 +938,11 @@ recap: {full_result["recap"]}.""",
         render_link = os.path.join(public_dir, "render_assets")
         if os.path.islink(render_link):
             os.unlink(render_link)
-        os.symlink(config.BASE_PATH, render_link)
-        logger_config.info(f"Symlinked render_assets -> {config.BASE_PATH}")
+        os.symlink(config.CONTENT_TO_BE_PROCESSED, render_link)
+        logger_config.info(f"Symlinked render_assets -> {config.CONTENT_TO_BE_PROCESSED}")
 
-        output_abs = utils.to_abs(self.final_video_path, config.BASE_PATH)
-        manifest_abs = utils.to_abs(manifest_path, config.BASE_PATH)
+        output_abs = utils.to_abs(self.final_video_path, config.CONTENT_TO_BE_PROCESSED)
+        manifest_abs = utils.to_abs(manifest_path, config.CONTENT_TO_BE_PROCESSED)
 
         cmd = [
             "npx", "remotion", "render", "ReelVideo",
