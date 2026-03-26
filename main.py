@@ -30,6 +30,9 @@ class ContentCreator:
                 and os.path.splitext(os.path.basename(f))[0] == os.path.basename(os.path.dirname(f))
             ]
 
+        if self.is_publisher:
+            sync_from_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_BUCKET_ID, config.HF_TOKEN)
+
         for idx, file in enumerate(video_files):
             try:
                 pipeline = PublisherProcessor if self.is_publisher else VideoProcessor
@@ -44,9 +47,7 @@ class ContentCreator:
                 )
                 if self.is_publisher or pipeline_instance.allowed_create():
                     subpath = utils.to_rel(pipeline_instance.file_parent_dir_path, config.CONTENT_TO_BE_PROCESSED)
-                    if self.is_publisher:
-                        sync_from_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_BUCKET_ID, config.HF_TOKEN)
-                    else:
+                    if not self.is_publisher:
                         sync_to_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_MOUNT_PATH, subpath=subpath)
                     pipeline_instance.run()
             except (Exception, SystemExit) as e:
