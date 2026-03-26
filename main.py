@@ -46,7 +46,8 @@ class ContentCreator:
                     subpath = utils.to_rel(pipeline_instance.file_parent_dir_path, config.CONTENT_TO_BE_PROCESSED)
                     if self.is_publisher:
                         sync_from_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_BUCKET_ID, config.HF_TOKEN, subpath=subpath)
-                    sync_to_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_MOUNT_PATH, subpath=subpath)
+                    else:
+                        sync_to_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_MOUNT_PATH, subpath=subpath)
                     pipeline_instance.run()
             except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")
