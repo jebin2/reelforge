@@ -60,7 +60,7 @@ class TextFrameAligner:
             similarities = util.cos_sim(query_embedding, captions_embeddings)
             frame_idx = similarities.argmax()
 
-            frame_path = extract_scenes_json[frame_idx]["frame_path"][0]
+            frame_path = utils.to_abs(extract_scenes_json[frame_idx]["frame_path"][0], config.CONTENT_TO_BE_PROCESSED)
 
             count = sum(1 for item in result if item["frame_path"] == frame_path)
 
@@ -78,7 +78,7 @@ class TextFrameAligner:
 
             # Save frame
             output_path = os.path.join(self.cache_path, f"sentence_{i:02d}_frame_{frame_idx}.jpg")
-            shutil.copy2(extract_scenes_json[frame_idx]["frame_path"][0], output_path)
+            shutil.copy2(frame_path, output_path)
 
             # Log progress
             logger_config.info(f"Aligned {i+1}/{len(sentences)} sentences")

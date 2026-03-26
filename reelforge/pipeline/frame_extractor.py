@@ -11,6 +11,8 @@ from tqdm import tqdm
 from .scene_detector import run_transnetv2
 from .duplicate_filter import FaceDINO
 from .person_detector import PersonDetectorYOLO
+from reelforge import config
+from jebin_lib import utils
 
 def variance_of_laplacian(image):
 	"""Original method - Blur detection using Laplacian variance."""
@@ -485,7 +487,7 @@ def map_dialogues_to_scenes(
             "scene_start": scene_start,
             "scene_end": scene_end,
             "best_time": best_time,
-            "frame_path": [frame_path],
+            "frame_path": [utils.to_rel(frame_path, config.CONTENT_TO_BE_PROCESSED)],
             "dialogues": scene_dialogues,
             "scene_dialogue": ""
         })

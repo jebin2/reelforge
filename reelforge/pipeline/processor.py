@@ -731,7 +731,7 @@ recap: {full_result["recap"]}.""",
 
                 emoji_placer.place_emoji_on_video(
                     video_path=frame_obj["auto_crop_9x16_path"],
-                    img_path=frame_obj["frame_path"],
+                    img_path=utils.to_abs(frame_obj["frame_path"], config.CONTENT_TO_BE_PROCESSED),
                     emoji_text=frame_obj["critical_emoji"],
                     output_path=new_path
                 )
