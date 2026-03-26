@@ -1,4 +1,4 @@
-from jebin_lib import load_env, utils, ensure_hf_mounted
+from jebin_lib import load_env, utils, ensure_hf_mounted, sync_to_hf
 load_env()
 
 import gc
@@ -43,6 +43,8 @@ class ContentCreator:
                     category=category,
                 )
                 if self.is_publisher or pipeline_instance.allowed_create():
+                    subpath = utils.to_rel(pipeline_instance.file_parent_dir_path, config.CONTENT_TO_BE_PROCESSED)
+                    sync_to_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_MOUNT_PATH, subpath=subpath)
                     pipeline_instance.run()
             except (Exception, SystemExit) as e:
                 logger_config.error(f"Failed to process {file}: {e}")

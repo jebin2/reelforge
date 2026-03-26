@@ -4,7 +4,7 @@ import shutil
 from custom_logger import logger_config
 from ..pipeline_base import PipelineBase
 from .. import config
-from jebin_lib import utils
+from jebin_lib import utils, sync_to_hf
 
 class PublisherProcessor(PipelineBase):
     def __init__(self, file, category):
@@ -26,6 +26,7 @@ class PublisherProcessor(PipelineBase):
             else:
                 os.remove(entry.path)
         logger_config.info(f"Cleaned up folder: {self.file_parent_dir_path}")
+        sync_to_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_MOUNT_PATH, subpath=utils.to_rel(self.file_parent_dir_path, config.CONTENT_TO_BE_PROCESSED), force=True)
 
     def _mark_published(self, publish_at_ist=None):
         progress = self._get_progress()
