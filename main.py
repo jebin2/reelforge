@@ -30,9 +30,6 @@ class ContentCreator:
                 and os.path.splitext(os.path.basename(f))[0] == os.path.basename(os.path.dirname(f))
             ]
 
-        if self.is_publisher:
-            sync_from_hf(config.CONTENT_TO_BE_PROCESSED, config.HF_BUCKET_ID, config.HF_TOKEN)
-
         for idx, file in enumerate(video_files):
             try:
                 pipeline = PublisherProcessor if self.is_publisher else VideoProcessor
