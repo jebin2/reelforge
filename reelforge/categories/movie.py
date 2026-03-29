@@ -1,6 +1,7 @@
 from .base import CategoryBase
 from .. import config
 
+
 class Movie(CategoryBase):
     def __init__(self, processor_obj):
         super().__init__("movie", processor_obj)
@@ -12,17 +13,11 @@ class Movie(CategoryBase):
         with open(config.MOVIE_SHORT_RECAP_SYSTEM_PROMPT, 'r') as file:
             return file.read()
 
-    def allowed_to_publish_in_twitter(self):
-        return False
-
-    def allowed_to_publish_in_yt(self):
-        return True
-
     def get_yt_description(self):
-        return f"#movie #moviebreakdown #movieshorts"
+        return "#movie #moviebreakdown #movieshorts"
 
     def get_yt_tags(self):
-        return ['MovieBreakdown', 'MovieAnalysis ', 'MovieReview', 'recap']
+        return ['MovieBreakdown', 'MovieAnalysis', 'MovieReview', 'recap']
 
     def get_cred_token_file_name(self):
         return "ytmrcredentials.json", "ytmrtoken.json"

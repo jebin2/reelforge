@@ -75,10 +75,6 @@ class PipelineBase(ABC):
         progress_json = self._get_progress()
         return progress_json.get("PROCESSED", False)
 
-    def is_published(self):
-        progress_json = self._get_progress()
-        return progress_json.get("PUBLISHED", False)
-
     def _acquire_lock(self) -> bool:
         lock_path = _lock_path_for(self.file_parent_dir_path)
         try:

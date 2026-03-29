@@ -9,7 +9,7 @@ tmux has-session -t reelforge 2>/dev/null || \
 
 tmux has-session -t publish 2>/dev/null || \
   tmux new-session -d -s publish \
-    "bash -i -c 'cd $HOME/git/reelforge && penv && ./run_app.sh --publisher; exec bash'"
+    "bash -i -c 'cd $HOME/git/pub_yt_x && penv && python main.py; exec bash'"
 
 tmux has-session -t chess 2>/dev/null || \
   tmux new-session -d -s chess \

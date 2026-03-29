@@ -29,7 +29,6 @@ dependencies = [
     "spacy",
     "sentence_transformers",
     "gemiwrap @ git+https://github.com/jebin2/gemiwrap.git",
-    "youtube_auto_pub @ git+https://github.com/jebin2/youtube_auto_pub.git",
 ]
 
 [tool.setuptools.packages.find]

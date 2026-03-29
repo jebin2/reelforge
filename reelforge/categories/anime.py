@@ -1,6 +1,7 @@
 from .base import CategoryBase
 from .. import config
 
+
 class Anime(CategoryBase):
     def __init__(self, processor_obj):
         super().__init__(config.ANIME, processor_obj)
@@ -12,20 +13,11 @@ class Anime(CategoryBase):
         with open(config.ANIME_SHORT_RECAP_SYSTEM_PROMPT, 'r') as file:
             return file.read()
 
-    def allowed_to_publish_in_twitter(self):
-        return False
-
-    def allowed_to_publish_in_yt(self):
-        return True
-
     def get_yt_description(self):
-        return f"#anime #animebreakdown #animeshorts"
+        return "#anime #animebreakdown #animeshorts"
 
     def get_yt_tags(self):
-        tags = ['AnimeBreakdown', 'AnimeAnalysis ', 'AnimeReview', 'recap']
-        tags.append("shorts")
-
-        return tags
+        return ['AnimeBreakdown', 'AnimeAnalysis', 'AnimeReview', 'recap', 'shorts']
 
     def get_cred_token_file_name(self):
         return "ytarcredentials.json", "ytartoken.json"
