@@ -5,6 +5,7 @@ import gc
 import shutil
 import sys
 import os
+import time
 import traceback
 from custom_logger import logger_config
 
@@ -23,6 +24,12 @@ class ContentCreator:
 
         for idx, file in enumerate(video_files):
             try:
+                size1 = os.path.getsize(file)
+                time.sleep(5)
+                if os.path.getsize(file) != size1:
+                    logger_config.info(f"File still being copied, skipping: {file}")
+                    continue
+
                 pipeline = VideoProcessor
                 logger_config.info(f"Processing {pipeline.__name__} {idx + 1}/{len(video_files)} : {file}")
 
