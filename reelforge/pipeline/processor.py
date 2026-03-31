@@ -313,6 +313,10 @@ recap: {full_result["recap"]}.""",
         user_prompt = self.file_base_name_with_ext
 
         if full_result.get("recap", "") == "":
+            recap_source = self.category.get_recap_source_file() or self.get_compressed_file()
+            if recap_source != self.get_compressed_file():
+                logger_config.info(f"Using transcript file for recap: {recap_source}")
+
             recap_str = ""
             try_times = 0
             while try_times < 5 and recap_str == "":
@@ -327,7 +331,7 @@ recap: {full_result["recap"]}.""",
                     )
                     model_responses = geminiWrapper.send_message(
                         user_prompt=user_prompt,
-                        file_path=self.file,
+                        file_path=recap_source,
                         compress=False
                     )
                     recap_str = json_repair.loads(model_responses[0])["data"]
@@ -342,7 +346,7 @@ recap: {full_result["recap"]}.""",
                         result = json_repair.loads(baseUIChat.quick_chat(
                             user_prompt=user_prompt,
                             system_prompt=self.category.review_system_prompt(),
-                            file_path=os.path.basename(self.get_compressed_file())
+                            file_path=os.path.basename(recap_source)
                         ))
                         if not isinstance(result, dict) or "data" not in result:
                             raise ValueError(f"AIStudioUIChat returned unexpected response for recap: {result!r}")

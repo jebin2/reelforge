@@ -31,6 +31,10 @@ class CategoryBase(ABC):
         else:
             raise ValueError(f"Invalid category: {name}")
 
+    def get_recap_source_file(self):
+        """Return a transcript file path to use for recap generation, or None to use the video."""
+        return None
+
     def allowed_to_publish_in_twitter(self):
         return False
 
