@@ -1,7 +1,8 @@
 import type { AnimationName, TransitionName, WordTiming } from "remotion-animation-kit";
 
 export interface ReelClip {
-  videoSrc: string;
+  videoSrc?: string;
+  imageSrc?: string;
   audioSrc: string;
   durationInSeconds: number;
   emojiText?: string;

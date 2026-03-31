@@ -974,10 +974,159 @@ recap: {full_result["recap"]}.""",
         else:
             raise Exception(f"Remotion render produced no valid video for {self.file}")
 
+    # ------------------------------------------------------------------ long-form
+
+    def generate_long_recap(self):
+        full_result = {}
+        if utils.is_valid_json(self.long_recap_path):
+            with open(self.long_recap_path, "r") as f:
+                full_result = json.load(f)
+
+        if full_result.get("recap", "") == "":
+            recap_source = self.category.get_recap_source_file() or self.get_compressed_file()
+            if recap_source != self.get_compressed_file():
+                logger_config.info(f"Using transcript file for long recap: {recap_source}")
+
+            user_prompt = self.file_base_name_with_ext
+            recap_str = ""
+            try_times = 0
+            while try_times < 5 and recap_str == "":
+                try_times += 1
+                logger_config.info(f"Generating long recap for {self.file} (try {try_times}/5)...")
+                try:
+                    geminiWrapper = pre_model_wrapper(
+                        system_instruction=self.category.long_recap_system_prompt(),
+                        schema=self._recap_schema(),
+                        delete_files=True
+                    )
+                    model_responses = geminiWrapper.send_message(
+                        user_prompt=user_prompt,
+                        file_path=recap_source,
+                        compress=False
+                    )
+                    recap_str = json_repair.loads(model_responses[0])["data"]
+                    logger_config.info(f"Long recap generated for {self.file}: {recap_str[:100]}...")
+                except Exception as e:
+                    logger_config.error(f"Failed to generate long recap: {e}")
+                    recap_str = ""
+
+            full_result["recap"] = recap_str
+            if full_result["recap"] == "":
+                raise Exception(f"Failed to generate long recap for {self.file}")
+
+            with open(self.long_recap_path, "w", encoding="utf-8") as f:
+                json.dump(full_result, f, indent=4, ensure_ascii=False)
+
+        return full_result
+
+    def generate_longform_manifest(self, best_frames):
+        title = self.generate_recap().get("youtube_title", self.file_base_name_without_ext)
+
+        clips_data = [
+            {
+                "narration_text": frame_obj.get("recap_sentence", ""),
+                "duration_seconds": float(frame_obj["duration"]),
+                "words": frame_obj.get("transcription", []),
+            }
+            for frame_obj in best_frames
+        ]
+
+        animations = self.pick_clip_animations(clips_data)
+        anim_by_index = {a["clip_index"]: a for a in animations}
+        transition_by_index = {a["clip_index"]: a.get("transitionIn", "none") for a in animations}
+
+        clips = []
+        for i, frame_obj in enumerate(best_frames):
+            frame_abs = utils.to_abs(frame_obj["frame_path"], config.CONTENT_TO_BE_PROCESSED)
+            audio_abs = utils.to_abs(frame_obj["audio_path"], config.CONTENT_TO_BE_PROCESSED)
+            frame_rel = "render_assets/" + os.path.relpath(frame_abs, config.CONTENT_TO_BE_PROCESSED)
+            audio_rel = "render_assets/" + os.path.relpath(audio_abs, config.CONTENT_TO_BE_PROCESSED)
+            anim_info = anim_by_index.get(i, {})
+
+            next_transition = transition_by_index.get(i + 1, "none") if (i + 1) < len(best_frames) else "none"
+            clip_duration = float(frame_obj["duration"])
+            if next_transition != "none":
+                clip_duration += config.TRANSITION_DURATION
+
+            clips.append({
+                "imageSrc": frame_rel,
+                "audioSrc": audio_rel,
+                "durationInSeconds": clip_duration,
+                "animation": anim_info.get("animation", "ken_burns"),
+                "transitionIn": anim_info.get("transitionIn", "none"),
+                "wordTimings": frame_obj.get("transcription", []),
+            })
+
+        manifest = {
+            "fps": 24,
+            "width": 1920,
+            "height": 1080,
+            "title": title,
+            "clips": clips,
+        }
+
+        manifest_path = os.path.join(self.longform_media_dir_path, "longform_manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump({"manifest": manifest}, f, indent=4, ensure_ascii=False)
+
+        logger_config.info(f"Long-form manifest written: {manifest_path} ({len(clips)} clips)")
+        return manifest_path
+
+    def create_longform_video_remotion(self):
+        if utils.is_valid_video(self.longform_video_path):
+            return self.longform_video_path
+
+        best_frames = self.create_clip_for_frames()
+        manifest_path = self.generate_longform_manifest(best_frames)
+
+        remotion_dir = os.path.join(config.BASE_PATH, "remotion-reels")
+        self._ensure_remotion_reels_ready(remotion_dir)
+
+        public_dir = os.path.join(remotion_dir, "public")
+        os.makedirs(public_dir, exist_ok=True)
+        render_link = os.path.join(public_dir, "render_assets")
+        if os.path.islink(render_link):
+            os.unlink(render_link)
+        os.symlink(config.CONTENT_TO_BE_PROCESSED, render_link)
+        logger_config.info(f"Symlinked render_assets -> {config.CONTENT_TO_BE_PROCESSED}")
+
+        output_abs = utils.to_abs(self.longform_video_path, config.CONTENT_TO_BE_PROCESSED)
+        manifest_abs = utils.to_abs(manifest_path, config.CONTENT_TO_BE_PROCESSED)
+
+        cmd = [
+            "npx", "remotion", "render", "ReelVideo",
+            "--props", manifest_abs,
+            "--output", output_abs,
+            "--codec", "h264",
+            "--log", "verbose",
+        ]
+
+        logger_config.info(f"Running Remotion for long-form: {' '.join(cmd)}")
+        try:
+            result = subprocess.run(cmd, cwd=remotion_dir, capture_output=False)
+        finally:
+            if os.path.islink(render_link):
+                os.unlink(render_link)
+                logger_config.info("Cleaned up render_assets symlink.")
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Remotion long-form render failed with exit code {result.returncode}")
+
+        if utils.is_valid_video(self.longform_video_path):
+            normalize_loudness(self.longform_video_path)
+            ffmpeg_optimise.convert_and_compare(self.longform_video_path, f"/tmp/{self.file_base_name_without_ext}_longform.hevc.mp4", overwrite_original=True)
+            return self.longform_video_path
+        else:
+            raise Exception(f"Remotion long-form render produced no valid video for {self.file}")
+
+    # ------------------------------------------------------------------ main
+
     def process(self):
         if self.is_processed():
             logger_config.info(f"Already processed: {self.file}")
             return
 
+        self.generate_long_recap()
         self.create_final_video_remotion()
+        self.create_longform_video_remotion()
         self.category.create_progress_file()

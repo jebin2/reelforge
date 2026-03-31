@@ -35,6 +35,10 @@ class CategoryBase(ABC):
         """Return a transcript file path to use for recap generation, or None to use the video."""
         return None
 
+    def long_recap_system_prompt(self):
+        """Return the system prompt for long-form recap generation."""
+        raise NotImplementedError
+
     def allowed_to_publish_in_twitter(self):
         return False
 
@@ -113,6 +117,9 @@ class CategoryBase(ABC):
         progress.update({
             "FINAL_VIDEO_PATH": utils.to_rel(
                 self.processor_obj.final_video_path, config.CONTENT_TO_BE_PROCESSED
+            ),
+            "LONGFORM_VIDEO_PATH": utils.to_rel(
+                self.processor_obj.longform_video_path, config.CONTENT_TO_BE_PROCESSED
             ),
             "SHORTS_VIDEO_PATH": None,
             "YOUTUBE_TITLE": youtube_title,

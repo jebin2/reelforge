@@ -13,6 +13,10 @@ class Anime(CategoryBase):
         with open(config.ANIME_SHORT_RECAP_SYSTEM_PROMPT, 'r') as file:
             return file.read()
 
+    def long_recap_system_prompt(self):
+        with open(config.ANIME_LONG_RECAP_SYSTEM_PROMPT, 'r') as file:
+            return file.read()
+
     def get_yt_description(self):
         return "#anime #animebreakdown #animeshorts"
 

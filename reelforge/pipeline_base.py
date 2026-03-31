@@ -52,6 +52,10 @@ class PipelineBase(ABC):
         self.musicgen_path = self.file_path + "_musicgen.wav"
         self.merged_audio_path = self.file_path + "_merged_audio.wav"
         self.final_video_path = self.file_parent_dir_path + "/output.mp4"
+        self.longform_video_path = self.file_parent_dir_path + "/longform_output.mp4"
+        self.long_recap_path = self.file_path + "_long_recap.json"
+        self.longform_media_dir_path = self.file_path + "_longform_media"
+        os.makedirs(self.longform_media_dir_path, exist_ok=True)
         self.progress_path = self.file_parent_dir_path + "/progress.json"
 
     # ------------------------------------------------------------------ progress
