@@ -25,7 +25,7 @@ export const ReelSequences: React.FC<Props> = ({ manifest }) => {
   return (
     <AbsoluteFill>
       <Sequence from={0} durationInFrames={TITLE_CARD_FRAMES} layout="none">
-        <TitleCard title={title} media={clips.map((c) => ({ videoSrc: c.videoSrc ?? c.imageSrc }))} />
+        <TitleCard title={title} media={clips.map((c) => ({ videoSrc: c.videoSrc, imageSrc: c.imageSrc }))} />
       </Sequence>
 
       <Sequence from={TITLE_CARD_FRAMES} layout="none">
