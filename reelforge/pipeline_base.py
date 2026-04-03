@@ -56,6 +56,11 @@ class PipelineBase(ABC):
         self.long_recap_path = self.file_path + "_long_recap.json"
         self.longform_media_dir_path = self.file_path + "_longform_media"
         os.makedirs(self.longform_media_dir_path, exist_ok=True)
+        self.longform_sentences_json_path = self.file_path + "_longform_sentences.json"
+        self.longform_match_scenes_path = self.file_path + "_longform_match_scenes.json"
+        self.longform_best_frames_json_path = self.file_path + "_longform_best_frames.json"
+        self.longform_sentence_frames_dir_path = self.file_path + "_longform_sentence_frames"
+        os.makedirs(self.longform_sentence_frames_dir_path, exist_ok=True)
         self.progress_path = self.file_parent_dir_path + "/progress.json"
 
     # ------------------------------------------------------------------ progress

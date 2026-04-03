@@ -448,9 +448,10 @@ recap: {full_result["recap"]}.""",
             },
         )
 
-    def pick_clip_animations(self, clips_data):
+    def pick_clip_animations(self, clips_data, output_path=None):
         """Use LLM to assign per-clip animation and transition types."""
-        output_path = os.path.join(self.sentence_media_dir_path, "clip_animations.json")
+        if output_path is None:
+            output_path = os.path.join(self.sentence_media_dir_path, "clip_animations.json")
 
         if utils.is_valid_json(output_path):
             with open(output_path, "r") as f:
@@ -1031,7 +1032,8 @@ recap: {full_result["recap"]}.""",
             for frame_obj in best_frames
         ]
 
-        animations = self.pick_clip_animations(clips_data)
+        longform_animations_path = os.path.join(self.longform_media_dir_path, "clip_animations.json")
+        animations = self.pick_clip_animations(clips_data, output_path=longform_animations_path)
         anim_by_index = {a["clip_index"]: a for a in animations}
         transition_by_index = {a["clip_index"]: a.get("transitionIn", "none") for a in animations}
 
@@ -1072,11 +1074,174 @@ recap: {full_result["recap"]}.""",
         logger_config.info(f"Long-form manifest written: {manifest_path} ({len(clips)} clips)")
         return manifest_path
 
+    def _generate_longform_sentences(self):
+        if utils.is_valid_json(self.longform_sentences_json_path):
+            with open(self.longform_sentences_json_path, "r") as f:
+                data = json.load(f)
+                if len(data) >= 5:
+                    return data
+                else:
+                    logger_config.info(f"Longform sentences not valid (len {len(data)} < 5), regenerating...")
+                    utils.remove_file(self.longform_sentences_json_path)
+
+        full_result = self.generate_long_recap()
+        sentences = text_splitter.split(full_result["recap"])
+
+        with open(self.longform_sentences_json_path, "w", encoding="utf-8") as f:
+            json.dump(sentences, f, indent=4, ensure_ascii=False)
+
+        return sentences
+
+    def match_longform_scenes(self):
+        match_scene = None
+        sentences = self._generate_longform_sentences()
+
+        if utils.is_valid_json(self.longform_match_scenes_path):
+            with open(self.longform_match_scenes_path, "r") as f:
+                match_scene = json.load(f)
+            try:
+                all_recap = [sent["recap_sentence"] for sent in match_scene]
+                all_recap[len(sentences) - 1]
+            except:
+                logger_config.info("Longform match scene not valid, regenerating...")
+                utils.remove_file(self.longform_match_scenes_path)
+                match_scene = None
+
+        retry_times = 0
+        while match_scene is None and retry_times < 5:
+            retry_times += 1
+            user_prompt = f"""Scene Captions:: {self._only_scene_caption_dialogue()}\nRecap Sentences:: {sentences}"""
+
+            with open(config.SCENE_MATCHING_SYSTEM_PROMPT, "r") as f:
+                system_prompt = f.read()
+
+            logger_config.info("Longform Scene Matching")
+            baseUIChat = AIStudioUIChat()
+            match_scene = baseUIChat.quick_chat(
+                user_prompt=user_prompt,
+                system_prompt=system_prompt
+            )
+
+            with open(config.JSON_VALIDATOR_SYSTEM_PROMPT, "r") as f:
+                system_prompt = f.read()
+
+            if not match_scene:
+                raise ValueError("Failed to generate longform match scene")
+
+            logger_config.info("JSON Validator")
+            if isinstance(match_scene, str):
+                match_scene = match_scene.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='replace')
+
+            validated_scene = None
+            try:
+                validated_scene = utils.parse_json(match_scene, schema={
+                    "type": list,
+                    "items": {"required": ["scene_caption", "recap_sentence"]},
+                })
+            except Exception:
+                pass
+
+            if validated_scene is not None:
+                match_scene = validated_scene
+            else:
+                try:
+                    geminiWrapper = pre_model_wrapper(
+                        system_instruction=system_prompt,
+                        schema=self._match_scene_schema(),
+                        delete_files=True
+                    )
+                    model_responses = geminiWrapper.send_message(
+                        user_prompt=match_scene
+                    )
+                    match_scene = json_repair.loads(model_responses[0])["data"]
+                    all_recap = [sent["recap_sentence"] for sent in match_scene]
+                    all_recap[len(sentences) - 1]
+                except Exception as e:
+                    logger_config.error(f"Longform sentence not similar retry: {e}")
+                    match_scene = None
+
+        if match_scene is None:
+            raise ValueError("Failed to generate longform match scene")
+
+        if retry_times > 0:
+            with open(self.longform_match_scenes_path, "w", encoding="utf-8") as f:
+                json.dump(match_scene, f, indent=4, ensure_ascii=False)
+
+        return match_scene
+
+    def choose_longform_best_frames(self):
+        best_frames = None
+        if utils.is_valid_json(self.longform_best_frames_json_path):
+            with open(self.longform_best_frames_json_path, "r") as f:
+                best_frames = json.load(f)
+                if len(best_frames) > 0:
+                    return best_frames
+
+        with sentence_matcher.TextFrameAligner(
+            cache_path=self.longform_sentence_frames_dir_path
+        ) as aligner:
+            best_frames = aligner.match_scenes_online(
+                self._generate_longform_sentences(),
+                self.generate_captions(),
+                self.match_longform_scenes()
+            )
+
+        with open(self.longform_best_frames_json_path, "w", encoding="utf-8") as f:
+            json.dump(best_frames, f, indent=4, ensure_ascii=False)
+
+        if len(best_frames) > 0:
+            return best_frames
+        else:
+            raise Exception(f"Failed to generate longform best frames for {self.file}")
+
+    def create_clip_for_longform_frames(self):
+        best_frames = self.choose_longform_best_frames()
+        hf_tts_client = HFTTSClient()
+        hf_stt_client = HFSTTClient()
+
+        for i, frame_obj in enumerate(best_frames):
+            logger_config.info(f"Working on longform clip frame {i+1} of {len(best_frames)}", overwrite=True)
+            updated = False
+            audio_path = os.path.join(self.longform_media_dir_path, f"audio_{i}.wav")
+
+            if "audio_path" not in frame_obj or not utils.is_valid_audio(audio_path):
+                if utils.file_exists(audio_path):
+                    utils.remove_file(audio_path)
+
+                hf_tts_client.generate_audio_segment(frame_obj["recap_sentence"], audio_path)
+                utils.copy(audio_path, f"{audio_path.replace('.wav', '_original.wav')}")
+                utils.trim_silence(audio_path)
+                utils.speed_up_audio(audio_path)
+                frame_obj["audio_path"] = audio_path
+                updated = True
+
+            if "transcription" not in frame_obj:
+                transcription_path = hf_stt_client.transcribe(audio_path)
+                with open(transcription_path, "r") as f:
+                    transcription = json.load(f)
+                    transcription = transcription["segments"]["word"]
+                frame_obj["transcription"] = transcription
+                updated = True
+
+            if "duration" not in frame_obj:
+                audio_duration_result = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", audio_path],
+                    capture_output=True, text=True, check=True
+                )
+                frame_obj["duration"] = float(audio_duration_result.stdout.strip())
+                updated = True
+
+            if updated:
+                with open(self.longform_best_frames_json_path, "w") as f:
+                    json.dump(best_frames, f, indent=4, ensure_ascii=False)
+
+        return best_frames
+
     def create_longform_video_remotion(self):
         if utils.is_valid_video(self.longform_video_path):
             return self.longform_video_path
 
-        best_frames = self.create_clip_for_frames()
+        best_frames = self.create_clip_for_longform_frames()
         manifest_path = self.generate_longform_manifest(best_frames)
 
         remotion_dir = os.path.join(config.BASE_PATH, "remotion-reels")
