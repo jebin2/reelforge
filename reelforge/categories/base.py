@@ -115,13 +115,12 @@ class CategoryBase(ABC):
 
         progress = self.processor_obj._get_progress()
         progress.update({
-            "FINAL_VIDEO_PATH": utils.to_rel(
-                self.processor_obj.final_video_path, config.CONTENT_TO_BE_PROCESSED
-            ),
-            "LONGFORM_VIDEO_PATH": utils.to_rel(
+            "LONG_VIDEO_PATH": utils.to_rel(
                 self.processor_obj.longform_video_path, config.CONTENT_TO_BE_PROCESSED
             ),
-            "SHORTS_VIDEO_PATH": None,
+            "SHORTS_VIDEO_PATH": utils.to_rel(
+                self.processor_obj.final_video_path, config.CONTENT_TO_BE_PROCESSED
+            ),
             "YOUTUBE_TITLE": youtube_title,
             "TWITTER_POST": twitter_post,
             "PROCESSED": True,
