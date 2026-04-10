@@ -146,6 +146,10 @@ class VideoProcessor(PipelineBase):
                 intro_json = json.load(file)
                 intro_start_sec = intro_json.get("start_sec", None)
                 intro_end_sec = intro_json.get("end_sec", None)
+                if intro_start_sec is not None:
+                    intro_start_sec = float(intro_start_sec)
+                if intro_end_sec is not None:
+                    intro_end_sec = float(intro_end_sec)
 
         if intro_start_sec is None or intro_end_sec is None:
             intro_new_seg = []
@@ -186,6 +190,10 @@ class VideoProcessor(PipelineBase):
                 outro_json = json.load(file)
                 outro_start_sec = outro_json.get("start_sec", None)
                 outro_end_sec = outro_json.get("end_sec", None)
+                if outro_start_sec is not None:
+                    outro_start_sec = float(outro_start_sec)
+                if outro_end_sec is not None:
+                    outro_end_sec = float(outro_end_sec)
 
         if outro_start_sec is None or outro_end_sec is None:
             outro_new_seg = []
