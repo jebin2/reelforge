@@ -21,16 +21,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 SESSION_NAME="content"
 
-echo "Checking sessions..."
-zellij list-sessions 2>&1 || true
-
 if zellij list-sessions 2>/dev/null | grep -q "^${SESSION_NAME}$"; then
   echo "Session already running"
   exit 0
 fi
 
 LAYOUT_PATH="$HOME/git/reelforge/layouts/content.kdl"
-echo "Layout path: $LAYOUT_PATH"
 echo "Starting zellij session..."
 
-exec zellij -s "$SESSION_NAME" --new-session-with-layout "$LAYOUT_PATH"
+nohup zellij -s "$SESSION_NAME" --new-session-with-layout "$LAYOUT_PATH" > /tmp/zellij.log 2>&1 &
+sleep 3
