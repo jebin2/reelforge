@@ -1,41 +1,21 @@
 #!/bin/bash
-
 set -e
 
-sleep 20
+SESSION=content
+LAYOUT="$HOME/git/reelforge/layouts/content.kdl"
 
-ZELLIJ_DIR="$HOME/.local/bin"
-export PATH="$ZELLIJ_DIR:$PATH"
+zellij list-sessions 2>/dev/null | grep -q "^$SESSION$" || \
+zellij -s "$SESSION" -l "$LAYOUT"
 
-echo "=== Starting zellij session script ==="
+sleep 2
 
-if ! command -v zellij &> /dev/null; then
-  echo "Installing zellij..."
-  mkdir -p "$ZELLIJ_DIR"
-  cd "$ZELLIJ_DIR"
-  curl -fSL https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz -o zellij.tar.gz
-  tar -xzf zellij.tar.gz
-  chmod +x zellij
-  mv zellij "$ZELLIJ_DIR/"
-  rm -f zellij.tar.gz
-  cd - > /dev/null || true
-fi
+zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
+zellij -s "$SESSION" write 13
 
-echo "Checking zellij..."
-zellij --version || { echo "zellij not found"; exit 1; }
+zellij -s "$SESSION" focus-next-pane
+zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/pub_yt_x && source venv/bin/activate && python main.py"
+zellij -s "$SESSION" write 13
 
-echo "Checking layout..."
-LAYOUT_PATH="$HOME/git/reelforge/layouts/content.kdl"
-ls -la "$LAYOUT_PATH" || { echo "Layout not found"; exit 1; }
-
-SESSION_NAME="content"
-
-if zellij list-sessions 2>/dev/null | grep -q "^${SESSION_NAME}$"; then
-  echo "Session already running"
-  exit 0
-fi
-
-echo "Starting zellij session..."
-nohup zellij -s "$SESSION_NAME" --new-session-with-layout "$LAYOUT_PATH" > /tmp/zellij.log 2>&1 &
-sleep 3
-echo "Done"
+zellij -s "$SESSION" focus-next-pane
+zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/solvechessdotcom && source venv/bin/activate && ./run_app.sh"
+zellij -s "$SESSION" write 13
