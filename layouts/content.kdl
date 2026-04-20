@@ -1,9 +1,11 @@
 layout {
-    pane split_direction="vertical" {
-        pane command="bash" args="-lc" "source /home/ubuntu/.bashrc 2>/dev/null || true; cd $HOME/git/reelforge && penv && ./run_pipelines.sh; exec bash" start_suspended=false
-        pane split_direction="horizontal" {
-            pane command="bash" args="-lc" "source /home/ubuntu/.bashrc 2>/dev/null || true; cd $HOME/git/pub_yt_x && penv && python main.py; exec bash" start_suspended=false
-            pane command="bash" args="-lc" "source /home/ubuntu/.bashrc 2>/dev/null || true; cd $HOME/git/solvechessdotcom && penv && ./run_app.sh; exec bash" start_suspended=false
+    tab "content" {
+        pane size=1 split_direction="vertical" {
+            pane
+            pane size=1 split_direction="horizontal" {
+                pane
+                pane
+            }
         }
     }
 }
