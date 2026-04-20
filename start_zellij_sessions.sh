@@ -5,16 +5,17 @@ SESSION=content
 LAYOUT="$HOME/git/reelforge/layouts/content.kdl"
 
 if zellij list-sessions -s | grep -qx "$SESSION"; then
-    zellij attach -f "$SESSION"
+    zellij attach -f "$SESSION" || true
 else
     echo "Creating session '$SESSION'..."
-    script -qc "zellij attach -c -f $SESSION" /dev/null &
+    zellij -s "$SESSION" -l "$LAYOUT" &
     sleep 5
+fi
 
-    for i in 1 2 3 4 5; do
-        zellij list-sessions -s | grep -qx "$SESSION" && break
-        sleep 2
-    done
+if [ -z "$ZELLIJ_SESSION_NAME" ]; then
+    echo "Not in zellij session. Run this from within zellij to send commands."
+    echo "Script will send commands after you attach manually."
+    exit 0
 fi
 
 zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
