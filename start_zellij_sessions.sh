@@ -7,6 +7,8 @@ sleep 20
 ZELLIJ_DIR="$HOME/.local/bin"
 export PATH="$ZELLIJ_DIR:$PATH"
 
+echo "=== Starting zellij session script ==="
+
 if ! command -v zellij &> /dev/null; then
   echo "Installing zellij..."
   mkdir -p "$ZELLIJ_DIR"
@@ -16,8 +18,15 @@ if ! command -v zellij &> /dev/null; then
   chmod +x zellij
   mv zellij "$ZELLIJ_DIR/"
   rm -f zellij.tar.gz
-  cd - > /dev/null
+  cd - > /dev/null || true
 fi
+
+echo "Checking zellij..."
+zellij --version || { echo "zellij not found"; exit 1; }
+
+echo "Checking layout..."
+LAYOUT_PATH="$HOME/git/reelforge/layouts/content.kdl"
+ls -la "$LAYOUT_PATH" || { echo "Layout not found"; exit 1; }
 
 SESSION_NAME="content"
 
@@ -26,8 +35,7 @@ if zellij list-sessions 2>/dev/null | grep -q "^${SESSION_NAME}$"; then
   exit 0
 fi
 
-LAYOUT_PATH="$HOME/git/reelforge/layouts/content.kdl"
 echo "Starting zellij session..."
-
 nohup zellij -s "$SESSION_NAME" --new-session-with-layout "$LAYOUT_PATH" > /tmp/zellij.log 2>&1 &
 sleep 3
+echo "Done"
