@@ -9,7 +9,12 @@ if zellij list-sessions -s | grep -qx "$SESSION"; then
 else
     echo "Creating session '$SESSION'..."
     script -qc "zellij attach -c -f $SESSION" /dev/null &
-    sleep 3
+    sleep 5
+
+    for i in 1 2 3 4 5; do
+        zellij list-sessions -s | grep -qx "$SESSION" && break
+        sleep 2
+    done
 fi
 
 zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
