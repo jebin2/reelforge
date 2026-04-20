@@ -8,8 +8,11 @@ if zellij list-sessions -s | grep -qx "$SESSION"; then
     zellij attach -f "$SESSION" || true
 else
     echo "Creating session '$SESSION'..."
+    echo "Detach (Ctrl+o d) then re-attach from local terminal:"
+    echo "  ssh ... 'zellij attach -c -f content'"
+    echo ""
     zellij -s "$SESSION" -l "$LAYOUT" &
-    sleep 5
+    sleep 3
 fi
 
 zellij --session "$SESSION" action write-chars "cd ~/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
