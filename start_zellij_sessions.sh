@@ -7,8 +7,10 @@ LAYOUT="$HOME/git/reelforge/layouts/content.kdl"
 if zellij list-sessions -s | grep -qx "$SESSION"; then
     zellij attach -f "$SESSION"
 else
-    zellij attach -c -f "$SESSION"
-    sleep 2
+    echo "No session '$SESSION' found."
+    echo "Run this from within an existing zellij session, or manually:"
+    echo "  zellij attach -c -f content"
+    exit 1
 fi
 
 zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
