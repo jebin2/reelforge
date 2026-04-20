@@ -11,13 +11,13 @@ else
     sleep 2
 fi
 
-zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
-zellij -s "$SESSION" write 13
+zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/reelforge && source venv/bin/activate && ./run_pipelines.sh"
+zellij --session "$SESSION" action write 13
 
-zellij -s "$SESSION" focus-next-pane
-zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/pub_yt_x && source venv/bin/activate && python main.py"
-zellij -s "$SESSION" write 13
+zellij --session "$SESSION" action focus-next-pane
+zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/pub_yt_x && source venv/bin/activate && python main.py"
+zellij --session "$SESSION" action write 13
 
-zellij -s "$SESSION" focus-next-pane
-zellij -s "$SESSION" write-chars "cd /home/ubuntu/git/solvechessdotcom && source venv/bin/activate && ./run_app.sh"
-zellij -s "$SESSION" write 13
+zellij --session "$SESSION" action focus-next-pane
+zellij --session "$SESSION" action write-chars "cd /home/ubuntu/git/solvechessdotcom && source venv/bin/activate && ./run_app.sh"
+zellij --session "$SESSION" action write 13
