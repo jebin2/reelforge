@@ -4,9 +4,11 @@ set -e
 
 sleep 20
 
+ZELLIJ_DIR="$HOME/.local/bin"
+export PATH="$ZELLIJ_DIR:$PATH"
+
 if ! command -v zellij &> /dev/null; then
   echo "Installing zellij..."
-  ZELLIJ_DIR="$HOME/.local/bin"
   mkdir -p "$ZELLIJ_DIR"
   cd "$ZELLIJ_DIR"
   curl -fSL https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz -o zellij.tar.gz
@@ -16,8 +18,6 @@ if ! command -v zellij &> /dev/null; then
   rm -f zellij.tar.gz
   cd - > /dev/null
 fi
-
-export PATH="$HOME/.local/bin:$PATH"
 
 SESSION_NAME="content"
 
