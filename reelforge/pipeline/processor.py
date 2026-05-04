@@ -892,9 +892,12 @@ recap: {full_result["recap"]}.""",
             anim_info = anim_by_index.get(i, {})
 
             next_transition_in = transition_by_index.get(i + 1, "none") if (i + 1) < len(best_frames_with_focus_character) else "none"
+            current_transition_in = transition_by_index.get(i, "none")
             clip_duration = float(frame_obj["duration"])
             if next_transition_in != "none":
                 clip_duration += config.TRANSITION_DURATION
+            if i > 0 and current_transition_in != "none":
+                clip_duration = max(clip_duration, config.TRANSITION_DURATION)
 
             clip = {
                 "videoSrc": video_rel,
@@ -1054,9 +1057,12 @@ recap: {full_result["recap"]}.""",
             anim_info = anim_by_index.get(i, {})
 
             next_transition = transition_by_index.get(i + 1, "none") if (i + 1) < len(best_frames) else "none"
+            current_transition = transition_by_index.get(i, "none")
             clip_duration = float(frame_obj["duration"])
             if next_transition != "none":
                 clip_duration += config.TRANSITION_DURATION
+            if i > 0 and current_transition != "none":
+                clip_duration = max(clip_duration, config.TRANSITION_DURATION)
 
             clips.append({
                 "imageSrc": frame_rel,
